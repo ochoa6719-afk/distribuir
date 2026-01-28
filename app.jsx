@@ -1,4 +1,3 @@
-// React desde CDN
 const { useState } = React;
 
 function App() {
@@ -14,149 +13,102 @@ function App() {
     { id: 3, name: "Deuda 2", monto: 75, type: "gasto" }
   ]);
 
-  const [history, setHistory] = useState([]);
-  const [searchText, setSearchText] = useState("");
-  const [filterFromDate, setFilterFromDate] = useState("");
-  const [filterToDate, setFilterToDate] = useState("");
   const [records, setRecords] = useState([]);
 
-  const ahorroReal = records.reduce((sum, r) => sum + r.value, 0);
-
   const totalDeudasSeleccionadas = partitions
-    .filter((p) => p.type === "gasto" && selectedGastos[p.id])
+    .filter(p => p.type === "gasto" && selectedGastos[p.id])
     .reduce((sum, p) => sum + Number(p.monto), 0);
 
-  const handleAddPartition = () => {
-    setPartitions([
-      ...partitions,
-      { id: Date.now(), name: "Nueva Parte", monto: 0, type: "gasto" }
-    ]);
-  };
-
-  const recomputeBalances = (list) => {
-    let balance = 0;
-    return list.map((r) => {
-      balance += r.value;
-      return { ...r, balance };
-    });
-  };
-
-  const handleDeleteRecord = (id) => {
-    const recordExists = records.some((r) => r.id === id);
-    if (!recordExists) {
-      alert("El registro ya no existe o fue filtrado.");
-      return;
-    }
-
-    const confirmDelete = window.confirm("¿Seguro que deseas eliminar este registro?");
-    if (!confirmDelete) return;
-
-    const filtered = records.filter((r) => r.id !== id);
-
-    const recalculated = recomputeBalances(filtered);
-
-    setRecords(recalculated);
-    setHistory(history.filter((h) => h.id !== id));
-  };
-
-  const handleExportExcel = () => {
-    if (records.length === 0) {
-      alert("No hay registros para exportar");
-      return;
-    }
-
-    const headers = ["Fecha", "Nombre", "Valor", "Saldo"];
-    const rows = records.map((r) => [r.date, r.name, r.value, r.balance]);
-
-    let csvContent = headers.join(",") + "\n";
-    rows.forEach((row) => {
-      csvContent += row.join(",") + "\n";
-    });
-
-    const encodedUri =
-      "data:text/csv;charset=utf-8," + encodeURIComponent(csvContent);
-
-    const link = document.createElement("a");
-    link.href = encodedUri;
-    link.download = "registros_finanzas.csv";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   const handleValueSubmit = () => {
+    if (!inputName || !inputDate) {
+      alert("Completa todos los campos");
+      return;
+    }
+
     const value = Number(inputValue);
-
-    if (!inputName.trim()) {
-      alert("Debes ingresar un nombre para este registro.");
-      return;
-    }
-
-    if (!inputDate) {
-      alert("Debes seleccionar una fecha.");
-      return;
-    }
-
-    const previousBalance =
-      records.length > 0 ? records[records.length - 1].balance : 0;
-    const newBalance = previousBalance + value;
-
-    const id = Date.now();
+    const lastBalance = records.length
+      ? records[records.length - 1].balance
+      : 0;
 
     const newRecord = {
-      id,
+      id: Date.now(),
       name: inputName,
       value,
       date: inputDate,
-      balance: newBalance
-    };
-
-    let distribution = [];
-
-    if (value > 0 && distributeIncome) {
-      let restante = value - totalDeudasSeleccionadas;
-      if (restante < 0) restante = 0;
-
-      distribution = partitions.map((p) => {
-        if (p.type === "gasto" && selectedGastos[p.id]) {
-          return { ...p, amount: p.monto };
-        }
-        if (p.type === "ahorro") return { ...p, amount: restante };
-        return { ...p, amount: 0 };
-      });
-    }
-
-    const newHistoryItem = {
-      id,
-      name: inputName,
-      value,
-      date: inputDate,
-      distribution,
-      gastosAplicados: distributeIncome
+      balance: lastBalance + value
     };
 
     setRecords([...records, newRecord]);
-    setHistory([...history, newHistoryItem]);
     setInputName("");
     setInputValue(0);
     setInputDate("");
   };
 
-  const filteredRecords = records.filter((r) => {
-    const matchName = r.name.toLowerCase().includes(searchText.toLowerCase());
-    const matchFrom = filterFromDate ? r.date >= filterFromDate : true;
-    const matchTo = filterToDate ? r.date <= filterToDate : true;
-    return matchName && matchFrom && matchTo;
-  });
-
   return (
-    <div style={{ padding: 20 }}>
-      <h1>Distribuidor de Valores</h1>
-      {/* Aquí todo tu JSX original */}
+    <div style={{ padding: "20px", maxWidth: 600, margin: "auto" }}>
+      <h1>💰 Distribuidor de Valores</h1>
+
+      <input
+        placeholder="Nombre"
+        value={inputName}
+        onChange={e => setInputName(e.target.value)}
+      />
+
+      <input
+        type="number"
+        placeholder="Valor"
+        value={inputValue}
+        onChange={e => setInputValue(e.target.value)}
+      />
+
+      <input
+        type="date"
+        value={inputDate}
+        onChange={e => setInputDate(e.target.value)}
+      />
+
+      <label>
+        <input
+          type="checkbox"
+          checked={distributeIncome}
+          onChange={() => setDistributeIncome(!distributeIncome)}
+        />
+        Distribuir ingreso
+      </label>
+
+      <h3>Gastos</h3>
+      {partitions
+        .filter(p => p.type === "gasto")
+        .map(p => (
+          <label key={p.id}>
+            <input
+              type="checkbox"
+              checked={selectedGastos[p.id] || false}
+              onChange={() =>
+                setSelectedGastos({
+                  ...selectedGastos,
+                  [p.id]: !selectedGastos[p.id]
+                })
+              }
+            />
+            {p.name} (${p.monto})
+          </label>
+        ))}
+
+      <button onClick={handleValueSubmit}>Guardar</button>
+
+      <h3>📊 Registros</h3>
+      <ul>
+        {records.map(r => (
+          <li key={r.id}>
+            {r.date} | {r.name} | ${r.value} → Saldo: ${r.balance}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
-// Render React
+// Render
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(<App />);
