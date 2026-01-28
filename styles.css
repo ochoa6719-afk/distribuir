@@ -1,9 +1,175 @@
-body {
-  font-family: Arial, sans-serif;
-  background: #f2f2f2;
-  padding: 20px;
+/* RESET BÁSICO */
+* {
+  box-sizing: border-box;
 }
 
-h1 {
-  color: #333;
+body {
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background-color: #f8f9fa;
+  color: #212529;
+}
+
+/* CONTENEDOR GENERAL */
+.container {
+  max-width: 900px;
+  margin: 30px auto;
+  padding: 0 15px;
+}
+
+/* TÍTULOS */
+h1, h2 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+/* TARJETAS */
+.card {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 25px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* INPUTS */
+input,
+select {
+  width: 100%;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: #86b7fe;
+}
+
+/* CHECKBOX */
+label {
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+/* BOTONES */
+button {
+  border: none;
+  border-radius: 4px;
+  padding: 8px 14px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+/* BOTONES ESPECÍFICOS */
+.btn-primary {
+  background-color: #0d6efd;
+  color: white;
+}
+
+.btn-success {
+  background-color: #198754;
+  color: white;
+}
+
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+/* FILAS DE PARTICIONES */
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.row input {
+  flex: 2;
+}
+
+.row select {
+  flex: 1;
+}
+
+.row button {
+  flex-shrink: 0;
+}
+
+/* AHORRO TOTAL */
+.ahorro {
+  background-color: #d1f7df;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+}
+
+.ahorro h2 {
+  margin-bottom: 5px;
+  font-size: 16px;
+  color: #146c43;
+}
+
+.ahorro p {
+  margin: 0;
+  font-size: 32px;
+  font-weight: bold;
+  color: #146c43;
+}
+
+/* TABLA */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+thead {
+  background-color: #e9ecef;
+}
+
+th,
+td {
+  border: 1px solid #dee2e6;
+  padding: 8px;
+  text-align: center;
+  font-size: 14px;
+}
+
+th {
+  font-weight: 600;
+}
+
+/* BOTÓN ELIMINAR EN TABLA */
+table button {
+  padding: 4px 8px;
+  font-size: 13px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 600px) {
+  .row {
+    flex-direction: column;
+  }
+
+  table {
+    font-size: 12px;
+  }
 }
