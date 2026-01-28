@@ -46,7 +46,6 @@ function App() {
 
   return (
     <div style={{ padding: "20px", maxWidth: 600, margin: "auto" }}>
-      <h1>💰 Distribuidor de Valores</h1>
 
       <input
         placeholder="Nombre"
