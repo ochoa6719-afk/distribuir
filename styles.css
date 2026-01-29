@@ -1,175 +1,145 @@
-/* RESET BÁSICO */
+/* ===== RESET ===== */
 * {
   box-sizing: border-box;
+  font-family: "Inter", system-ui, sans-serif;
 }
 
 body {
   margin: 0;
-  font-family: "Segoe UI", Arial, sans-serif;
-  background-color: #f8f9fa;
-  color: #212529;
+  background: linear-gradient(135deg, #f0fdf4, #ecfeff);
+  min-height: 100vh;
+  color: #0f172a;
 }
 
-/* CONTENEDOR GENERAL */
-.container {
-  max-width: 900px;
-  margin: 30px auto;
-  padding: 0 15px;
+/* ===== CONTENEDOR ===== */
+#root > div {
+  max-width: 600px;
+  margin: 40px auto;
+  background: white;
+  padding: 28px;
+  border-radius: 18px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+  animation: fadeIn 0.5s ease;
 }
 
-/* TÍTULOS */
-h1, h2 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  font-weight: 600;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* TARJETAS */
-.card {
-  background: #ffffff;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 25px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-/* INPUTS */
-input,
-select {
+/* ===== INPUTS ===== */
+input {
   width: 100%;
-  padding: 8px 10px;
-  margin-bottom: 10px;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-  font-size: 14px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  font-size: 15px;
 }
 
-input:focus,
-select:focus {
+input:focus {
   outline: none;
-  border-color: #86b7fe;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
 }
 
-/* CHECKBOX */
+/* ===== CHECKBOX + TEXTO ===== */
 label {
-  font-size: 14px;
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 10px;
+  font-size: 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
 }
 
-/* BOTONES */
+label input[type="checkbox"] {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: #10b981;
+}
+
+/* ===== BOTÓN ===== */
 button {
+  width: 100%;
+  padding: 14px;
+  margin-top: 14px;
+  background: linear-gradient(135deg, #10b981, #14b8a6);
+  color: white;
   border: none;
-  border-radius: 4px;
-  padding: 8px 14px;
-  font-size: 14px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
 }
 
 button:hover {
-  opacity: 0.9;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 25px rgba(16, 185, 129, 0.35);
 }
 
-/* BOTONES ESPECÍFICOS */
-.btn-primary {
-  background-color: #0d6efd;
-  color: white;
+/* ===== SECCIONES ===== */
+h3 {
+  margin-top: 22px;
+  margin-bottom: 10px;
+  color: #065f46;
 }
 
-.btn-success {
-  background-color: #198754;
-  color: white;
+/* ===== LISTA ===== */
+ul {
+  list-style: none;
+  padding: 0;
+  margin-top: 12px;
 }
 
-.btn-danger {
-  background-color: #dc3545;
-  color: white;
-}
-
-.btn-secondary {
-  background-color: #6c757d;
-  color: white;
-}
-
-/* FILAS DE PARTICIONES */
-.row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.row input {
-  flex: 2;
-}
-
-.row select {
-  flex: 1;
-}
-
-.row button {
-  flex-shrink: 0;
-}
-
-/* AHORRO TOTAL */
-.ahorro {
-  background-color: #d1f7df;
-  border-radius: 8px;
-  padding: 20px;
-  text-align: center;
-}
-
-.ahorro h2 {
-  margin-bottom: 5px;
-  font-size: 16px;
-  color: #146c43;
-}
-
-.ahorro p {
-  margin: 0;
-  font-size: 32px;
-  font-weight: bold;
-  color: #146c43;
-}
-
-/* TABLA */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
-}
-
-thead {
-  background-color: #e9ecef;
-}
-
-th,
-td {
-  border: 1px solid #dee2e6;
-  padding: 8px;
-  text-align: center;
+ul li {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  padding: 14px;
+  border-radius: 12px;
+  margin-bottom: 10px;
   font-size: 14px;
+  transition: all 0.2s ease;
 }
 
-th {
-  font-weight: 600;
+ul li:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
 }
 
-/* BOTÓN ELIMINAR EN TABLA */
-table button {
-  padding: 4px 8px;
-  font-size: 13px;
-}
-
-/* RESPONSIVE */
+/* ===== RESPONSIVE ===== */
 @media (max-width: 600px) {
-  .row {
-    flex-direction: column;
+  #root > div {
+    margin: 16px;
+    padding: 20px;
   }
+}
+/* ===== AHORRO DISPONIBLE ===== */
+.ahorro-box {
+  margin: 24px 0;
+  padding: 20px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #d1fae5, #ecfeff);
+  text-align: center;
+  border: 1px solid #a7f3d0;
+}
 
-  table {
-    font-size: 12px;
-  }
+.ahorro-box span {
+  display: block;
+  font-size: 14px;
+  color: #065f46;
+}
+
+.ahorro-box strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 28px;
+  color: #064e3b;
 }

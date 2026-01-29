@@ -4,22 +4,44 @@ function App() {
   const [inputValue, setInputValue] = useState(0);
   const [inputName, setInputName] = useState("");
   const [inputDate, setInputDate] = useState("");
-  const [distributeIncome, setDistributeIncome] = useState(true);
-  const [selectedGastos, setSelectedGastos] = useState({});
-
-  const [partitions, setPartitions] = useState([
-    { id: 1, name: "Ahorro", monto: 0, type: "ahorro" },
-    { id: 2, name: "Deuda 1", monto: 99, type: "gasto" },
-    { id: 3, name: "Deuda 2", monto: 75, type: "gasto" }
-  ]);
 
   const [records, setRecords] = useState([]);
 
-  const totalDeudasSeleccionadas = partitions
-    .filter(p => p.type === "gasto" && selectedGastos[p.id])
-    .reduce((sum, p) => sum + Number(p.monto), 0);
+  // ===== GASTOS =====
+  const [gastos, setGastos] = useState([]);
+  const [newGastoName, setNewGastoName] = useState("");
+  const [newGastoMonto, setNewGastoMonto] = useState(0);
 
-  const handleValueSubmit = () => {
+  // ===== AHORRO TOTAL =====
+  const ahorroTotal = records.reduce((sum, r) => sum + r.value, 0);
+
+  // ===== AGREGAR GASTO =====
+  const addGasto = () => {
+    if (!newGastoName || !newGastoMonto) {
+      alert("Completa nombre y monto del gasto");
+      return;
+    }
+
+    setGastos([
+      ...gastos,
+      {
+        id: Date.now(),
+        name: newGastoName,
+        monto: Number(newGastoMonto)
+      }
+    ]);
+
+    setNewGastoName("");
+    setNewGastoMonto(0);
+  };
+
+  // ===== ELIMINAR GASTO =====
+  const removeGasto = (id) => {
+    setGastos(gastos.filter(g => g.id !== id));
+  };
+
+  // ===== REGISTRAR MOVIMIENTO =====
+  const handleSubmit = () => {
     if (!inputName || !inputDate) {
       alert("Completa todos los campos");
       return;
@@ -30,84 +52,121 @@ function App() {
       ? records[records.length - 1].balance
       : 0;
 
-    const newRecord = {
-      id: Date.now(),
-      name: inputName,
-      value,
-      date: inputDate,
-      balance: lastBalance + value
-    };
+    setRecords([
+      ...records,
+      {
+        id: Date.now(),
+        name: inputName,
+        value,
+        date: inputDate,
+        balance: lastBalance + value
+      }
+    ]);
 
-    setRecords([...records, newRecord]);
     setInputName("");
     setInputValue(0);
     setInputDate("");
   };
 
   return (
-    <div style={{ padding: "20px", maxWidth: 600, margin: "auto" }}>
+    <div className="container">
 
-      <input
-        placeholder="Nombre"
-        value={inputName}
-        onChange={e => setInputName(e.target.value)}
-      />
+      <h2>Control de Ingresos y Gastos</h2>
 
-      <input
-        type="number"
-        placeholder="Valor"
-        value={inputValue}
-        onChange={e => setInputValue(e.target.value)}
-      />
+      {/* REGISTRO */}
+      <div className="section">
+        <h3>Nuevo movimiento</h3>
 
-      <input
-        type="date"
-        value={inputDate}
-        onChange={e => setInputDate(e.target.value)}
-      />
-
-      <label>
         <input
-          type="checkbox"
-          checked={distributeIncome}
-          onChange={() => setDistributeIncome(!distributeIncome)}
+          placeholder="Descripción"
+          value={inputName}
+          onChange={e => setInputName(e.target.value)}
         />
-        Distribuir ingreso
-      </label>
 
-      <h3>Gastos</h3>
-      {partitions
-        .filter(p => p.type === "gasto")
-        .map(p => (
-          <label key={p.id}>
-            <input
-              type="checkbox"
-              checked={selectedGastos[p.id] || false}
-              onChange={() =>
-                setSelectedGastos({
-                  ...selectedGastos,
-                  [p.id]: !selectedGastos[p.id]
-                })
-              }
-            />
-            {p.name} (${p.monto})
-          </label>
+        <input
+          type="number"
+          placeholder="Valor (+ ingreso / - gasto)"
+          value={inputValue}
+          onChange={e => setInputValue(e.target.value)}
+        />
+
+        <input
+          type="date"
+          value={inputDate}
+          onChange={e => setInputDate(e.target.value)}
+        />
+
+        <button onClick={handleSubmit}>Guardar</button>
+      </div>
+
+      {/* GASTOS */}
+      <div className="section">
+        <h3>Gastos</h3>
+
+        <div className="gasto-form">
+          <input
+            placeholder="Nombre del gasto"
+            value={newGastoName}
+            onChange={e => setNewGastoName(e.target.value)}
+          />
+          <input
+            type="number"
+            placeholder="Monto"
+            value={newGastoMonto}
+            onChange={e => setNewGastoMonto(e.target.value)}
+          />
+          <button onClick={addGasto}>Agregar</button>
+        </div>
+
+        {gastos.length === 0 && (
+          <p className="muted">No hay gastos registrados</p>
+        )}
+
+        {gastos.map(g => (
+          <div key={g.id} className="gasto-item">
+            <span>{g.name}</span>
+            <div className="gasto-right">
+              <strong>${g.monto}</strong>
+              <button onClick={() => removeGasto(g.id)}>✕</button>
+            </div>
+          </div>
         ))}
+      </div>
 
-      <button onClick={handleValueSubmit}>Guardar</button>
+      {/* AHORRO */}
+      <div className="section ahorro">
+        <strong>Ahorro disponible:</strong>
+        <span>${ahorroTotal.toFixed(2)}</span>
+      </div>
 
-      <h3>📊 Registros</h3>
-      <ul>
-        {records.map(r => (
-          <li key={r.id}>
-            {r.date} | {r.name} | ${r.value} → Saldo: ${r.balance}
-          </li>
-        ))}
-      </ul>
+      {/* REGISTROS */}
+      <div className="section">
+        <h3>Registros</h3>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Detalle</th>
+              <th>Valor</th>
+              <th>Saldo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {records.map(r => (
+              <tr key={r.id}>
+                <td>{r.date}</td>
+                <td>{r.name}</td>
+                <td>${r.value}</td>
+                <td>${r.balance}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
     </div>
   );
 }
 
-// Render
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<App />);
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
