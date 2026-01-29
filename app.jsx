@@ -27,7 +27,8 @@ function App() {
       {
         id: Date.now(),
         name: newGastoName,
-        monto: Number(newGastoMonto)
+        monto: Number(newGastoMonto),
+        fecha: new Date().toLocaleDateString()
       }
     ]);
 
@@ -73,7 +74,7 @@ function App() {
 
       <h2>Control de Ingresos y Gastos</h2>
 
-      {/* REGISTRO */}
+      {/* ===== NUEVO MOVIMIENTO ===== */}
       <div className="section">
         <h3>Nuevo movimiento</h3>
 
@@ -99,7 +100,13 @@ function App() {
         <button onClick={handleSubmit}>Guardar</button>
       </div>
 
-      {/* GASTOS */}
+      {/* ===== AHORRO DISPONIBLE ===== */}
+      <div className="section ahorro">
+        <strong>Ahorro disponible</strong>
+        <span>${ahorroTotal.toFixed(2)}</span>
+      </div>
+
+      {/* ===== GASTOS ===== */}
       <div className="section">
         <h3>Gastos</h3>
 
@@ -115,35 +122,42 @@ function App() {
             value={newGastoMonto}
             onChange={e => setNewGastoMonto(e.target.value)}
           />
-          <button onClick={addGasto}>Agregar</button>
+          <button onClick={addGasto}>Agregar gasto</button>
         </div>
 
-        {gastos.length === 0 && (
+        {gastos.length === 0 ? (
           <p className="muted">No hay gastos registrados</p>
+        ) : (
+          <table className="excel-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Gasto</th>
+                <th>Monto</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {gastos.map(g => (
+                <tr key={g.id}>
+                  <td>{g.fecha}</td>
+                  <td>{g.name}</td>
+                  <td>${g.monto.toFixed(2)}</td>
+                  <td>
+                    <button onClick={() => removeGasto(g.id)}>Eliminar</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
-
-        {gastos.map(g => (
-          <div key={g.id} className="gasto-item">
-            <span>{g.name}</span>
-            <div className="gasto-right">
-              <strong>${g.monto}</strong>
-              <button onClick={() => removeGasto(g.id)}>✕</button>
-            </div>
-          </div>
-        ))}
       </div>
 
-      {/* AHORRO */}
-      <div className="section ahorro">
-        <strong>Ahorro disponible:</strong>
-        <span>${ahorroTotal.toFixed(2)}</span>
-      </div>
-
-      {/* REGISTROS */}
+      {/* ===== REGISTROS ===== */}
       <div className="section">
         <h3>Registros</h3>
 
-        <table>
+        <table className="excel-table">
           <thead>
             <tr>
               <th>Fecha</th>
