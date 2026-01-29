@@ -1,4 +1,44 @@
 /* =======================
+   PANTALLA INICIAL
+======================= */
+.landing {
+  min-height: 100vh;
+  width: 100%;
+  background: linear-gradient(135deg, #40916c, #95d5b2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.landing-card {
+  background: #ffffff;
+  padding: 50px 40px;
+  border-radius: 26px;
+  text-align: center;
+  max-width: 420px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.25);
+}
+
+.landing-card h1 {
+  font-size: 36px;
+  font-weight: 800;
+  color: #1b4332;
+  margin-bottom: 15px;
+}
+
+.landing-card p {
+  font-size: 16px;
+  color: #495057;
+  margin-bottom: 30px;
+}
+
+.big-btn {
+  font-size: 16px;
+  padding: 14px 30px;
+  border-radius: 14px;
+}
+
+/* =======================
    RESET GENERAL
 ======================= */
 * {
@@ -216,4 +256,38 @@ table button {
   .row {
     flex-direction: column;
   }
+}
+/* =======================
+   ICONOS ACCIONES
+======================= */
+.acciones {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.icon {
+  cursor: pointer;
+  font-size: 18px;
+  transition: transform 0.2s ease;
+}
+
+.icon:hover {
+  transform: scale(1.2);
+}
+
+.icon.edit {
+  color: #1b4332;
+}
+
+.icon.delete {
+  color: #d00000;
+}
+
+.icon.ok {
+  color: #2d6a4f;
+}
+
+.icon.cancel {
+  color: #6c757d;
 }

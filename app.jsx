@@ -1,19 +1,19 @@
-const { useState } = React;
-
 function App() {
-  const [inputValue, setInputValue] = useState(0);
-  const [inputName, setInputName] = useState("");
-  const [inputDate, setInputDate] = useState("");
+  const [showApp, setShowApp] = React.useState(false);
 
-  const [records, setRecords] = useState([]);
+  // ===== NUEVO MOVIMIENTO =====
+  const [inputValue, setInputValue] = React.useState(0);
+  const [inputName, setInputName] = React.useState("");
+  const [inputDate, setInputDate] = React.useState("");
+  const [records, setRecords] = React.useState([]);
 
   // ===== GASTOS =====
-  const [gastos, setGastos] = useState([]);
-  const [newGastoName, setNewGastoName] = useState("");
-  const [newGastoMonto, setNewGastoMonto] = useState(0);
+  const [gastos, setGastos] = React.useState([]);
+  const [newGastoName, setNewGastoName] = React.useState("");
+  const [newGastoMonto, setNewGastoMonto] = React.useState(0);
 
-  // ===== AHORRO TOTAL =====
-  const ahorroTotal = records.reduce((sum, r) => sum + r.value, 0);
+  // ===== AHORRO =====
+  const ahorroTotal = records.reduce((sum, r) => sum + Number(r.value), 0);
 
   // ===== AGREGAR GASTO =====
   const addGasto = () => {
@@ -36,7 +36,6 @@ function App() {
     setNewGastoMonto(0);
   };
 
-  // ===== ELIMINAR GASTO =====
   const removeGasto = (id) => {
     setGastos(gastos.filter(g => g.id !== id));
   };
@@ -60,6 +59,7 @@ function App() {
         name: inputName,
         value,
         date: inputDate,
+        createdAt: new Date().toLocaleString(),
         balance: lastBalance + value
       }
     ]);
@@ -69,12 +69,26 @@ function App() {
     setInputDate("");
   };
 
+  // ===== PANTALLA INICIAL =====
+  if (!showApp) {
+    return (
+      <div className="landing">
+        <div className="landing-card">
+          <h1>Distribuidor de Valores</h1>
+          <button className="btn-primary big-btn" onClick={() => setShowApp(true)}>
+            Entrar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ===== APP PRINCIPAL =====
   return (
     <div className="container">
-
       <h2>Control de Ingresos y Gastos</h2>
 
-      {/* ===== NUEVO MOVIMIENTO ===== */}
+      {/* NUEVO MOVIMIENTO */}
       <div className="section">
         <h3>Nuevo movimiento</h3>
 
@@ -97,38 +111,40 @@ function App() {
           onChange={e => setInputDate(e.target.value)}
         />
 
-        <button onClick={handleSubmit}>Guardar</button>
+        <button className="btn-success" onClick={handleSubmit}>
+          Guardar
+        </button>
       </div>
 
-      {/* ===== AHORRO DISPONIBLE ===== */}
+      {/* AHORRO */}
       <div className="section ahorro">
         <strong>Ahorro disponible</strong>
         <span>${ahorroTotal.toFixed(2)}</span>
       </div>
 
-      {/* ===== GASTOS ===== */}
+      {/* GASTOS */}
       <div className="section">
         <h3>Gastos</h3>
 
-        <div className="gasto-form">
-          <input
-            placeholder="Nombre del gasto"
-            value={newGastoName}
-            onChange={e => setNewGastoName(e.target.value)}
-          />
-          <input
-            type="number"
-            placeholder="Monto"
-            value={newGastoMonto}
-            onChange={e => setNewGastoMonto(e.target.value)}
-          />
-          <button onClick={addGasto}>Agregar gasto</button>
-        </div>
+        <input
+          placeholder="Nombre del gasto"
+          value={newGastoName}
+          onChange={e => setNewGastoName(e.target.value)}
+        />
 
-        {gastos.length === 0 ? (
-          <p className="muted">No hay gastos registrados</p>
-        ) : (
-          <table className="excel-table">
+        <input
+          type="number"
+          placeholder="Monto"
+          value={newGastoMonto}
+          onChange={e => setNewGastoMonto(e.target.value)}
+        />
+
+        <button className="btn-primary" onClick={addGasto}>
+          Agregar gasto
+        </button>
+
+        {gastos.length > 0 && (
+          <table>
             <thead>
               <tr>
                 <th>Fecha</th>
@@ -144,7 +160,9 @@ function App() {
                   <td>{g.name}</td>
                   <td>${g.monto.toFixed(2)}</td>
                   <td>
-                    <button onClick={() => removeGasto(g.id)}>Eliminar</button>
+                    <span className="icon delete" onClick={() => removeGasto(g.id)}>
+                      🗑️
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -153,33 +171,145 @@ function App() {
         )}
       </div>
 
-      {/* ===== REGISTROS ===== */}
+      {/* REGISTROS */}
       <div className="section">
         <h3>Registros</h3>
 
-        <table className="excel-table">
+        <table>
           <thead>
             <tr>
               <th>Fecha</th>
               <th>Detalle</th>
               <th>Valor</th>
               <th>Saldo</th>
+              <th>Info</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {records.map(r => (
-              <tr key={r.id}>
-                <td>{r.date}</td>
-                <td>{r.name}</td>
-                <td>${r.value}</td>
-                <td>${r.balance}</td>
-              </tr>
+            {records.map((r, index) => (
+              <RegistroFila
+                key={r.id}
+                registro={r}
+                index={index}
+                records={records}
+                setRecords={setRecords}
+              />
             ))}
           </tbody>
         </table>
       </div>
-
     </div>
+  );
+}
+
+// ===== FILA EDITABLE =====
+function RegistroFila({ registro, index, records, setRecords }) {
+  const [editando, setEditando] = React.useState(false);
+  const [temp, setTemp] = React.useState({ ...registro });
+
+  const guardar = () => {
+    if (!temp.name || Number(temp.value) === 0) {
+      alert("El nombre no puede estar vacío y el valor no puede ser 0");
+      return;
+    }
+
+    setRecords(prev => {
+      const nuevos = [...prev];
+      const saldoAnterior = index > 0 ? nuevos[index - 1].balance : 0;
+
+      nuevos[index] = {
+        ...temp,
+        value: Number(temp.value),
+        balance: saldoAnterior + Number(temp.value)
+      };
+
+      for (let i = index + 1; i < nuevos.length; i++) {
+        nuevos[i] = {
+          ...nuevos[i],
+          balance: nuevos[i - 1].balance + Number(nuevos[i].value)
+        };
+      }
+
+      return nuevos;
+    });
+
+    setEditando(false);
+  };
+
+  const eliminar = () => {
+    if (!window.confirm("¿Eliminar este registro?")) return;
+
+    setRecords(prevRecords => {
+      const filtrados = prevRecords.filter(r => r.id !== registro.id);
+
+      let saldo = 0;
+      return filtrados.map(r => {
+        saldo += Number(r.value);
+        return { ...r, balance: saldo };
+      });
+    });
+  };
+
+  return (
+    <tr>
+      <td>
+        {editando ? (
+          <input
+            type="date"
+            value={temp.date}
+            onChange={e => setTemp({ ...temp, date: e.target.value })}
+          />
+        ) : (
+          registro.date
+        )}
+      </td>
+
+      <td>
+        {editando ? (
+          <input
+            value={temp.name}
+            onChange={e => setTemp({ ...temp, name: e.target.value })}
+          />
+        ) : (
+          registro.name
+        )}
+      </td>
+
+      <td>
+        {editando ? (
+          <input
+            type="number"
+            value={temp.value}
+            onChange={e => setTemp({ ...temp, value: e.target.value })}
+          />
+        ) : (
+          `$${registro.value}`
+        )}
+      </td>
+
+      <td>${registro.balance}</td>
+
+      <td>
+        <span title={`Registrado el: ${registro.createdAt}`}>
+          ⏱️
+        </span>
+      </td>
+
+      <td className="acciones">
+        {editando ? (
+          <>
+            <span className="icon ok" onClick={guardar}>✔️</span>
+            <span className="icon cancel" onClick={() => setEditando(false)}>❌</span>
+          </>
+        ) : (
+          <>
+            <span className="icon edit" onClick={() => setEditando(true)}>✏️</span>
+            <span className="icon delete" onClick={eliminar}>🗑️</span>
+          </>
+        )}
+      </td>
+    </tr>
   );
 }
 
