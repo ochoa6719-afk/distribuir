@@ -14,7 +14,7 @@ function App() {
   const [inputDate, setInputDate] = useState("");
 
   const [records, setRecords] = useState([]);
-  const [editId, setEditId] = useState(null); // 👈 NUEVO
+  const [editId, setEditId] = useState(null);
 
   // ===== GASTOS =====
   const [gastos, setGastos] = useState([]);
@@ -28,9 +28,16 @@ function App() {
     const { data } = await supabase
       .from("movimientos")
       .select("*")
-      .order("fecha");
+      .order("fecha", { ascending: true });
 
-    setRecords(data || []);
+    let saldo = 0;
+
+    const conSaldo = (data || []).map(m => {
+      saldo += Number(m.valor);
+      return { ...m, saldo };
+    });
+
+    setRecords(conSaldo);
   };
 
   const cargarGastos = async () => {
@@ -50,9 +57,7 @@ function App() {
   /* =======================
      AHORRO TOTAL
   ======================= */
-  const ahorroTotal =
-    records.reduce((s, r) => s + Number(r.valor), 0) -
-    gastos.reduce((s, g) => s + Number(g.monto), 0);
+  const ahorroTotal = records.reduce((s, r) => s + Number(r.valor), 0);
 
   /* =======================
      MOVIMIENTOS
@@ -64,7 +69,6 @@ function App() {
     }
 
     if (editId) {
-      // ===== ACTUALIZAR =====
       await supabase
         .from("movimientos")
         .update({
@@ -76,7 +80,6 @@ function App() {
 
       setEditId(null);
     } else {
-      // ===== INSERTAR =====
       await supabase.from("movimientos").insert([{
         nombre: inputName,
         valor: Number(inputValue),
@@ -232,6 +235,7 @@ function App() {
               <th>Fecha</th>
               <th>Detalle</th>
               <th>Valor</th>
+              <th>Saldo</th>
               <th>Acción</th>
             </tr>
           </thead>
@@ -241,6 +245,7 @@ function App() {
                 <td>{r.fecha}</td>
                 <td>{r.nombre}</td>
                 <td>${r.valor}</td>
+                <td>${r.saldo}</td>
                 <td>
                   <button
                     className="btn-warning"
