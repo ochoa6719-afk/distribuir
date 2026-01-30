@@ -1,50 +1,13 @@
 /* =======================
-   PANTALLA INICIAL
-======================= */
-.landing {
-  min-height: 100vh;
-  width: 100%;
-  background: linear-gradient(135deg, #40916c, #95d5b2);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.landing-card {
-  background: #ffffff;
-  padding: 50px 40px;
-  border-radius: 26px;
-  text-align: center;
-  max-width: 420px;
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.25);
-}
-
-.landing-card h1 {
-  font-size: 36px;
-  font-weight: 800;
-  color: #1b4332;
-  margin-bottom: 15px;
-}
-
-.landing-card p {
-  font-size: 16px;
-  color: #495057;
-  margin-bottom: 30px;
-}
-
-.big-btn {
-  font-size: 16px;
-  padding: 14px 30px;
-  border-radius: 14px;
-}
-
-/* =======================
    RESET GENERAL
 ======================= */
 * {
   box-sizing: border-box;
 }
 
+/* =======================
+   BODY
+======================= */
 body {
   margin: 0;
   font-family: "Segoe UI", Arial, sans-serif;
@@ -58,7 +21,7 @@ body {
 }
 
 /* =======================
-   CONTENEDOR PRINCIPAL
+   CONTENEDOR
 ======================= */
 .container {
   width: 100%;
@@ -70,224 +33,88 @@ body {
 }
 
 /* =======================
-   TITULOS
+   TÍTULOS
 ======================= */
-h1, h2 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  font-weight: 600;
+h2, h3 {
   color: #1b4332;
+  margin-top: 0;
 }
 
 /* =======================
-   TARJETAS
+   INPUTS
 ======================= */
-.card {
-  background: #ffffff;
-  border-radius: 18px;
-  padding: 22px;
-  margin-bottom: 25px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-}
-
-/* =======================
-   INPUTS Y SELECT
-======================= */
-input,
-select {
+input {
   width: 100%;
-  padding: 10px 12px;
-  margin-bottom: 12px;
-  border: 1px solid #ced4da;
-  border-radius: 10px;
-  font-size: 14px;
-}
-
-input:focus,
-select:focus {
-  outline: none;
-  border-color: #52b788;
-}
-
-/* =======================
-   FILAS
-======================= */
-.row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
+  padding: 10px;
   margin-bottom: 10px;
-}
-
-.row input {
-  flex: 2;
-}
-
-.row select {
-  flex: 1;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  font-size: 14px;
 }
 
 /* =======================
    BOTONES
 ======================= */
 button {
-  border: none;
-  border-radius: 12px;
   padding: 10px 18px;
-  font-size: 14px;
+  border-radius: 12px;
+  border: none;
   cursor: pointer;
-  transition: all 0.2s ease;
+  background: #40916c;
+  color: white;
+  font-size: 14px;
 }
 
 button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
+  opacity: 0.9;
 }
 
-.btn-primary {
-  background-color: #40916c;
-  color: #ffffff;
-}
-
-.btn-success {
-  background-color: #2d6a4f;
-  color: #ffffff;
-}
-
-.btn-danger {
-  background-color: #d00000;
-  color: #ffffff;
-}
-
-.btn-secondary {
-  background-color: #6c757d;
-  color: #ffffff;
-}
-
-/* ===== AHORRO DISPONIBLE DESTACADO ===== */
+/* =======================
+   AHORRO DISPONIBLE
+======================= */
 .ahorro {
-  margin-top: 40px;          /* separación fuerte */
-  margin-bottom: 40px;       /* separación del resto */
-  padding: 30px 20px;
+  margin: 30px 0;
+  padding: 25px;
   border-radius: 18px;
-
   background: linear-gradient(135deg, #ecfeff, #d1fae5);
   border: 2px solid #10b981;
-
   text-align: center;
-
-  box-shadow: 0 18px 35px rgba(16, 185, 129, 0.35);
 }
 
-/* TÍTULO */
+/* TEXTO SUPERIOR */
 .ahorro strong {
-  display: block;
+  display: block;              /* 👈 CLAVE */
   font-size: 18px;
   font-weight: 600;
   color: #065f46;
   margin-bottom: 10px;
-  letter-spacing: 0.5px;
 }
 
-/* MONTO GRANDE */
+/* MONTO INFERIOR */
 .ahorro span {
-  display: block;
-  font-size: 42px;          /* 👈 MUY grande */
+  display: block;              /* 👈 CLAVE */
+  font-size: 42px;
   font-weight: 800;
   color: #064e3b;
 }
+
 /* =======================
-   TABLA REGISTROS (EXCEL)
+   TABLAS
 ======================= */
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 18px;
-  background: linear-gradient(
-    to bottom,
-    #d8f3dc 0%,
-    #ffffff 90%
-  );
-  border-radius: 16px;
-  overflow: hidden;
+  margin-top: 15px;
 }
 
-thead {
-  background-color: #b7e4c7;
-}
-
-th,
-td {
-  border: 1px solid rgba(0, 0, 0, 0.05);
+th, td {
   padding: 10px;
+  border: 1px solid #ddd;
   text-align: center;
   font-size: 14px;
 }
 
 th {
-  font-weight: 600;
+  background-color: #b7e4c7;
   color: #1b4332;
-}
-
-tbody tr:nth-child(even) {
-  background-color: rgba(183, 228, 199, 0.3);
-}
-
-/* BOTÓN ELIMINAR TABLA */
-table button {
-  padding: 6px 10px;
-  font-size: 13px;
-  border-radius: 8px;
-}
-
-/* =======================
-   RESPONSIVE
-======================= */
-@media (max-width: 600px) {
-  body {
-    align-items: flex-start;
-    padding: 15px;
-  }
-
-  .container {
-    padding: 20px;
-  }
-
-  .row {
-    flex-direction: column;
-  }
-}
-/* =======================
-   ICONOS ACCIONES
-======================= */
-.acciones {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-}
-
-.icon {
-  cursor: pointer;
-  font-size: 18px;
-  transition: transform 0.2s ease;
-}
-
-.icon:hover {
-  transform: scale(1.2);
-}
-
-.icon.edit {
-  color: #1b4332;
-}
-
-.icon.delete {
-  color: #d00000;
-}
-
-.icon.ok {
-  color: #2d6a4f;
-}
-
-.icon.cancel {
-  color: #6c757d;
 }
