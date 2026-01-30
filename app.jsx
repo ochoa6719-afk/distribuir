@@ -251,13 +251,13 @@ function App() {
                     className="btn-warning"
                     onClick={() => editarMovimiento(r)}
                   >
-                    Editar
+                    ✏️
                   </button>
                   <button
                     className="btn-danger"
                     onClick={() => eliminarMovimiento(r.id)}
                   >
-                    Eliminar
+                    🗑️
                   </button>
                 </td>
               </tr>
