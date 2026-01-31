@@ -1,4 +1,4 @@
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 /* =======================
    SUPABASE CONFIG
@@ -16,14 +16,15 @@ function App() {
   const [records, setRecords] = useState([]);
   const [editId, setEditId] = useState(null);
 
-  // ===== GASTOS =====
+  const formRef = useRef(null);
+
   const [gastos, setGastos] = useState([]);
   const [newGastoName, setNewGastoName] = useState("");
   const [newGastoMonto, setNewGastoMonto] = useState(0);
+  
+  //MODO OSCURO
+  const [isDark, setIsDark] = useState(false);
 
-  /* =======================
-     CARGAR DATOS
-  ======================= */
   const cargarMovimientos = async () => {
     const { data } = await supabase
       .from("movimientos")
@@ -54,14 +55,18 @@ function App() {
     cargarGastos();
   }, []);
 
-  /* =======================
-     AHORRO TOTAL
-  ======================= */
+  //MODO OSCURO
+useEffect(() => {
+  const dark = localStorage.getItem("darkMode") === "true";
+  if (dark) {
+    document.body.classList.add("dark");
+  }
+  setIsDark(dark);
+}, []);
+
+
   const ahorroTotal = records.reduce((s, r) => s + Number(r.valor), 0);
 
-  /* =======================
-     MOVIMIENTOS
-  ======================= */
   const handleSubmit = async () => {
     if (!inputName || !inputDate) {
       alert("Completa todos los campos");
@@ -104,11 +109,13 @@ function App() {
     setInputName(mov.nombre);
     setInputValue(mov.valor);
     setInputDate(mov.fecha);
+
+    formRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
   };
 
-  /* =======================
-     GASTOS
-  ======================= */
   const addGasto = async () => {
     if (!newGastoName || !newGastoMonto) {
       alert("Completa nombre y monto del gasto");
@@ -132,13 +139,30 @@ function App() {
     cargarGastos();
   };
 
+  //MODO OSCURO
+const toggleDarkMode = () => {
+  const newMode = !isDark;
+  setIsDark(newMode);
+
+  document.body.classList.toggle("dark", newMode);
+  localStorage.setItem("darkMode", newMode);
+};
+
+//MODO OSCURO EN </button>
   return (
     <div className="container">
 
       <h2>Control de Ingresos y Gastos</h2>
 
-      {/* ===== NUEVO MOVIMIENTO ===== */}
-      <div className="card">
+<button
+  onClick={toggleDarkMode}
+  className="dark-toggle"
+>
+  {isDark ? "☀️" : "🌙"}
+</button>
+
+
+      <div className="card" ref={formRef}>
         <h3>{editId ? "Editar movimiento" : "Nuevo movimiento"}</h3>
 
         <div className="row">
@@ -168,13 +192,11 @@ function App() {
         </button>
       </div>
 
-      {/* ===== AHORRO ===== */}
       <div className="ahorro">
         <strong>Ahorro disponible</strong>
         <span>${ahorroTotal.toFixed(2)}</span>
       </div>
 
-      {/* ===== GASTOS ===== */}
       <div className="card">
         <h3>Gastos / Deudas</h3>
 
@@ -216,7 +238,7 @@ function App() {
                     className="btn-danger"
                     onClick={() => removeGasto(g.id)}
                   >
-                    Eliminar
+                    🗑️
                   </button>
                 </td>
               </tr>
@@ -225,45 +247,48 @@ function App() {
         </table>
       </div>
 
-      {/* ===== REGISTROS ===== */}
+      {/* ===== REGISTROS (CON SCROLL) ===== */}
       <div className="card">
         <h3>Registros</h3>
 
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Detalle</th>
-              <th>Valor</th>
-              <th>Saldo</th>
-              <th>Acción</th>
-            </tr>
-          </thead>
-          <tbody>
-            {records.map(r => (
-              <tr key={r.id}>
-                <td>{r.fecha}</td>
-                <td>{r.nombre}</td>
-                <td>${r.valor}</td>
-                <td>${r.saldo}</td>
-                <td>
-                  <button
-                    className="btn-warning"
-                    onClick={() => editarMovimiento(r)}
-                  >
-                    ✏️
-                  </button>
-                  <button
-                    className="btn-danger"
-                    onClick={() => eliminarMovimiento(r.id)}
-                  >
-                    🗑️
-                  </button>
-                </td>
+        <div className="tabla-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Detalle</th>
+                <th>Valor</th>
+                <th>Saldo</th>
+                <th>Acción</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {records.map(r => (
+                <tr key={r.id}>
+                  <td>{r.fecha}</td>
+                  <td>{r.nombre}</td>
+                  <td>${r.valor}</td>
+                  <td>${r.saldo}</td>
+                  <td>
+                    <button
+                      className="btn-warning"
+                      onClick={() => editarMovimiento(r)}
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      className="btn-danger"
+                      onClick={() => eliminarMovimiento(r.id)}
+                    >
+                      🗑️
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
       </div>
 
     </div>
