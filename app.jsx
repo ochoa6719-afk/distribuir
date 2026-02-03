@@ -34,7 +34,7 @@ function App() {
     let saldo = 0;
 
     const conSaldo = (data || []).map(m => {
-      saldo += Number(m.valor);
+      saldo = Number((saldo + Number(m.valor)).toFixed(2));
       return { ...m, saldo };
     });
 
