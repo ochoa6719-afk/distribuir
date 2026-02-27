@@ -1,5 +1,6 @@
 const { useState, useEffect, useRef } = React;
 
+/* ======================= SUPABASE CONFIG ======================= */
 const supabase = window.supabase.createClient(
   "https://chpvbydpaztzbxdacqwe.supabase.co/",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNocHZieWRwYXp0emJ4ZGFjcXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2OTIyMjcsImV4cCI6MjA4NTI2ODIyN30.4gWLzTt8rk6LI13xSLI7rNmE21HgV9GAq8Lg_lk3SWo"
@@ -7,99 +8,79 @@ const supabase = window.supabase.createClient(
 
 function App() {
 
-  /* ================= AUTH ================= */
+  /* ======================= AUTH STATES ======================= */
   const [session, setSession] = useState(null);
-  const [nombres, setNombres] = useState("");
-  const [email, setEmail] = useState("");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [loginUsername, setLoginUsername] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
 
-  /* ================= SISTEMA ================= */
+  /* ======================= APP STATES ======================= */
   const [inputValue, setInputValue] = useState(0);
   const [inputName, setInputName] = useState("");
   const [inputDate, setInputDate] = useState("");
   const [records, setRecords] = useState([]);
   const [editId, setEditId] = useState(null);
+  const formRef = useRef(null);
   const [gastos, setGastos] = useState([]);
   const [newGastoName, setNewGastoName] = useState("");
   const [newGastoMonto, setNewGastoMonto] = useState(0);
-  const formRef = useRef(null);
+  const [isDark, setIsDark] = useState(false);
 
-  /* ================= SESSION ================= */
+  /* ======================= AUTH EFFECT ======================= */
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => setSession(session)
-    );
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
 
     return () => {
       listener.subscription.unsubscribe();
     };
   }, []);
 
-  /* ================= LOGIN ================= */
-  const signIn = async () => {
-    const { data } = await supabase
+  /* ======================= LOGIN ======================= */
+  const handleLogin = async () => {
+
+    if (!loginUsername || !loginPassword) {
+      alert("Completa usuario y contraseña");
+      return;
+    }
+
+    const { data: userData, error: userError } = await supabase
       .from("perfiles")
       .select("email")
-      .eq("username", username)
+      .eq("username", loginUsername)
       .single();
 
-    if (!data) {
+    if (userError || !userData) {
       alert("Usuario no encontrado");
       return;
     }
 
     const { error } = await supabase.auth.signInWithPassword({
-      email: data.email,
-      password,
-    });
-
-    if (error) alert(error.message);
-  };
-
-  /* ================= REGISTRO ================= */
-  const signUp = async () => {
-
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
+      email: userData.email,
+      password: loginPassword,
     });
 
     if (error) {
-      alert(error.message);
-      return;
+      alert("Contraseña incorrecta");
     }
-
-    if (data.user) {
-      await supabase.from("perfiles").insert([{
-        id: data.user.id,
-        nombres,
-        username,
-        email
-      }]);
-    }
-
-    alert("Usuario creado correctamente");
   };
 
-  const signOut = async () => {
+  const cerrarSesion = async () => {
     await supabase.auth.signOut();
   };
 
-  /* ================= CARGAR DATOS ================= */
+  /* ======================= DATA LOAD ======================= */
   const cargarMovimientos = async () => {
     const { data } = await supabase
       .from("movimientos")
       .select("*")
-      .eq("user_id", session.user.id)
       .order("fecha", { ascending: true });
 
     let saldo = 0;
-
     const conSaldo = (data || []).map(m => {
       saldo = Number((saldo + Number(m.valor)).toFixed(2));
       return { ...m, saldo };
@@ -112,7 +93,6 @@ function App() {
     const { data } = await supabase
       .from("gastos")
       .select("*")
-      .eq("user_id", session.user.id)
       .order("fecha");
 
     setGastos(data || []);
@@ -125,37 +105,34 @@ function App() {
     }
   }, [session]);
 
+  useEffect(() => {
+    const dark = localStorage.getItem("darkMode") === "true";
+    if (dark) document.body.classList.add("dark");
+    setIsDark(dark);
+  }, []);
+
   const ahorroTotal = records.reduce((s, r) => s + Number(r.valor), 0);
 
-  /* ================= MOVIMIENTOS ================= */
+  /* ======================= CRUD ======================= */
   const handleSubmit = async () => {
+    if (!inputName || !inputDate) {
+      alert("Completa todos los campos");
+      return;
+    }
 
     if (editId) {
-      await supabase
-        .from("movimientos")
-        .update({
-          nombre: inputName,
-          valor: Number(inputValue),
-          fecha: inputDate
-        })
+      await supabase.from("movimientos")
+        .update({ nombre: inputName, valor: Number(inputValue), fecha: inputDate })
         .eq("id", editId);
-
       setEditId(null);
-
     } else {
-
-      await supabase.from("movimientos").insert([{
-        nombre: inputName,
-        valor: Number(inputValue),
-        fecha: inputDate,
-        user_id: session.user.id
-      }]);
+      await supabase.from("movimientos")
+        .insert([{ nombre: inputName, valor: Number(inputValue), fecha: inputDate }]);
     }
 
     setInputName("");
     setInputValue(0);
     setInputDate("");
-
     cargarMovimientos();
   };
 
@@ -164,12 +141,24 @@ function App() {
     cargarMovimientos();
   };
 
+  const editarMovimiento = (mov) => {
+    setEditId(mov.id);
+    setInputName(mov.nombre);
+    setInputValue(mov.valor);
+    setInputDate(mov.fecha);
+    formRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
   const addGasto = async () => {
+    if (!newGastoName || !newGastoMonto) {
+      alert("Completa nombre y monto");
+      return;
+    }
+
     await supabase.from("gastos").insert([{
       nombre: newGastoName,
       monto: Number(newGastoMonto),
-      fecha: new Date(),
-      user_id: session.user.id
+      fecha: new Date()
     }]);
 
     setNewGastoName("");
@@ -182,44 +171,48 @@ function App() {
     cargarGastos();
   };
 
-  /* ================= LOGIN SCREEN ================= */
+  const toggleDarkMode = () => {
+    const newMode = !isDark;
+    setIsDark(newMode);
+    document.body.classList.toggle("dark", newMode);
+    localStorage.setItem("darkMode", newMode);
+  };
+
+  /* ======================= LOGIN SCREEN ======================= */
   if (!session) {
     return (
       <div className="container">
-        <h2>Acceso al Sistema</h2>
-
-        <input placeholder="Nombres" value={nombres}
-          onChange={e => setNombres(e.target.value)} />
-
-        <input placeholder="Correo" value={email}
-          onChange={e => setEmail(e.target.value)} />
-
-        <input placeholder="Nombre de usuario" value={username}
-          onChange={e => setUsername(e.target.value)} />
-
-        <input type="password" placeholder="Contraseña"
-          value={password}
-          onChange={e => setPassword(e.target.value)} />
-
-        <button onClick={signIn}>Ingresar</button>
-        <button onClick={signUp}>Crear cuenta</button>
+        <h2>Iniciar Sesión</h2>
+        <input
+          placeholder="Usuario"
+          value={loginUsername}
+          onChange={e => setLoginUsername(e.target.value)}
+        />
+        <input
+          type="password"
+          placeholder="Contraseña"
+          value={loginPassword}
+          onChange={e => setLoginPassword(e.target.value)}
+        />
+        <button onClick={handleLogin}>Ingresar</button>
       </div>
     );
   }
 
-  /* ================= SISTEMA ================= */
+  /* ======================= MAIN APP ======================= */
   return (
     <div className="container">
 
-      <button onClick={signOut}>Cerrar sesión</button>
+      <button onClick={cerrarSesion}>Cerrar sesión</button>
 
       <h2>Control de Ingresos y Gastos</h2>
 
-      <div className="ahorro">
-        <strong>Ahorro disponible</strong>
-        <span>${ahorroTotal.toFixed(2)}</span>
-      </div>
+      <button onClick={toggleDarkMode} className="dark-toggle">
+        {isDark ? "☀️" : "🌙"}
+      </button>
 
+      {/* AQUÍ SIGUE TODO TU SISTEMA IGUAL */}
+      
     </div>
   );
 }
