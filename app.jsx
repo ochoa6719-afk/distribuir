@@ -7,265 +7,125 @@ const supabase = window.supabase.createClient(
 );
 
 function App() {
-  const [inputValue, setInputValue] = useState(0);
-  const [inputName, setInputName] = useState("");
-  const [inputDate, setInputDate] = useState("");
-  const [records, setRecords] = useState([]);
-  const [editId, setEditId] = useState(null);
-  const formRef = useRef(null);
+  const [session, setSession] = useState(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
 
-  const [gastos, setGastos] = useState([]);
-  const [newGastoName, setNewGastoName] = useState("");
-  const [newGastoMonto, setNewGastoMonto] = useState(0);
-
-  //MODO OSCURO
-  const [isDark, setIsDark] = useState(false);
-
-  const cargarMovimientos = async () => {
-    const { data } = await supabase
-      .from("movimientos")
-      .select("*")
-      .order("fecha", { ascending: true });
-
-    let saldo = 0;
-    const conSaldo = (data || []).map(m => {
-      saldo = Number((saldo + Number(m.valor)).toFixed(2));
-      return { ...m, saldo };
+  useEffect(() => {
+    // Obtener sesión actual
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setLoadingAuth(false);
     });
 
-    setRecords(conSaldo);
-  };
-
-  const cargarGastos = async () => {
-    const { data } = await supabase
-      .from("gastos")
-      .select("*")
-      .order("fecha");
-
-    setGastos(data || []);
-  };
-
-  useEffect(() => {
-    cargarMovimientos();
-    cargarGastos();
+    // Escuchar cambios de sesión
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
   }, []);
 
-  //MODO OSCURO
-  useEffect(() => {
-    const dark = localStorage.getItem("darkMode") === "true";
-    if (dark) {
-      document.body.classList.add("dark");
-    }
-    setIsDark(dark);
-  }, []);
+  if (loadingAuth) return <h2>Cargando...</h2>;
 
-  const ahorroTotal = records.reduce((s, r) => s + Number(r.valor), 0);
+  if (!session) return <Login />;
 
-  const handleSubmit = async () => {
-    if (!inputName || !inputDate) {
+  return <MainApp session={session} />;
+}
+
+/* ======================= LOGIN ======================= */
+function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [remember, setRemember] = useState(true);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
       alert("Completa todos los campos");
       return;
     }
 
-    if (editId) {
-      await supabase
-        .from("movimientos")
-        .update({
-          nombre: inputName,
-          valor: Number(inputValue),
-          fecha: inputDate
-        })
-        .eq("id", editId);
-
-      setEditId(null);
-    } else {
-      await supabase.from("movimientos").insert([{
-        nombre: inputName,
-        valor: Number(inputValue),
-        fecha: inputDate
-      }]);
-    }
-
-    setInputName("");
-    setInputValue(0);
-    setInputDate("");
-    cargarMovimientos();
-  };
-
-  const eliminarMovimiento = async (id) => {
-    await supabase.from("movimientos").delete().eq("id", id);
-    cargarMovimientos();
-  };
-
-  const editarMovimiento = (mov) => {
-    setEditId(mov.id);
-    setInputName(mov.nombre);
-    setInputValue(mov.valor);
-    setInputDate(mov.fecha);
-
-    formRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "start"
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password
     });
-  };
 
-  const addGasto = async () => {
-    if (!newGastoName || !newGastoMonto) {
-      alert("Completa nombre y monto del gasto");
-      return;
-    }
-
-    await supabase.from("gastos").insert([{
-      nombre: newGastoName,
-      monto: Number(newGastoMonto),
-      fecha: new Date()
-    }]);
-
-    setNewGastoName("");
-    setNewGastoMonto(0);
-    cargarGastos();
-  };
-
-  const removeGasto = async (id) => {
-    await supabase.from("gastos").delete().eq("id", id);
-    cargarGastos();
-  };
-
-  //MODO OSCURO
-  const toggleDarkMode = () => {
-    const newMode = !isDark;
-    setIsDark(newMode);
-    document.body.classList.toggle("dark", newMode);
-    localStorage.setItem("darkMode", newMode);
+    if (error) alert(error.message);
   };
 
   return (
     <div className="container">
-      <h2>Control de Ingresos y Gastos</h2>
+      <h2>Iniciar Sesión</h2>
 
-      <button onClick={toggleDarkMode} className="dark-toggle">
-        {isDark ? "☀️" : "🌙"}
+      <input
+        type="email"
+        placeholder="Correo"
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+      />
+
+      <div style={{ position: "relative" }}>
+        <input
+          type={showPass ? "text" : "password"}
+          placeholder="Contraseña"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+        />
+        <button
+          style={{ position: "absolute", right: 5, top: 5 }}
+          onClick={() => setShowPass(!showPass)}
+        >
+          👁
+        </button>
+      </div>
+
+      <label style={{ fontSize: "14px" }}>
+        <input
+          type="checkbox"
+          checked={remember}
+          onChange={() => setRemember(!remember)}
+        />
+        Recordarme
+      </label>
+
+      <button className="btn-primary" onClick={handleLogin}>
+        Entrar
       </button>
+    </div>
+  );
+}
 
-      <div className="card" ref={formRef}>
-        <h3>{editId ? "Editar movimiento" : "Nuevo movimiento"}</h3>
+/* ======================= APP PRINCIPAL ======================= */
+function MainApp({ session }) {
 
-        <div className="row">
-          <input
-            placeholder="Descripción"
-            value={inputName}
-            onChange={e => setInputName(e.target.value)}
-          />
-        </div>
+  // TU APP ORIGINAL VA AQUÍ (no cambia nada)
+  // Solo agregamos botón cerrar sesión y crear usuario
 
-        <div className="row">
-          <input
-            type="number"
-            placeholder="Valor (+ ingreso / - gasto)"
-            value={inputValue}
-            onChange={e => setInputValue(e.target.value)}
-          />
+  const cerrarSesion = async () => {
+    await supabase.auth.signOut();
+  };
 
-          <input
-            type="date"
-            value={inputDate}
-            onChange={e => setInputDate(e.target.value)}
-          />
-        </div>
+  const crearUsuario = async () => {
+    const email = prompt("Correo nuevo usuario:");
+    const password = prompt("Contraseña:");
 
-        <button className="btn-primary" onClick={handleSubmit}>
-          {editId ? "Actualizar" : "Guardar"}
-        </button>
-      </div>
+    if (!email || !password) return;
 
-      <div className="ahorro">
-        <strong>Ahorro disponible</strong>
-        <span>${ahorroTotal.toFixed(2)}</span>
-      </div>
+    const { error } = await supabase.auth.signUp({
+      email,
+      password
+    });
 
-      <div className="card">
-        <h3>Gastos / Deudas</h3>
+    if (error) alert(error.message);
+    else alert("Usuario creado correctamente");
+  };
 
-        <div className="row">
-          <input
-            placeholder="Nombre del gasto"
-            value={newGastoName}
-            onChange={e => setNewGastoName(e.target.value)}
-          />
+  return (
+    <div>
+      <button onClick={cerrarSesion}>Cerrar sesión</button>
+      <button onClick={crearUsuario}>Crear usuario</button>
 
-          <input
-            type="number"
-            placeholder="Monto"
-            value={newGastoMonto}
-            onChange={e => setNewGastoMonto(e.target.value)}
-          />
-        </div>
-
-        <button className="btn-success" onClick={addGasto}>
-          Agregar gasto
-        </button>
-
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Gasto</th>
-              <th>Monto</th>
-              <th>Acción</th>
-            </tr>
-          </thead>
-          <tbody>
-            {gastos.map(g => (
-              <tr key={g.id}>
-                <td>{g.fecha?.slice(0,10)}</td>
-                <td>{g.nombre}</td>
-                <td>${g.monto}</td>
-                <td>
-                  <button className="btn-danger" onClick={() => removeGasto(g.id)}>
-                    🗑️
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="card">
-        <h3>Registros</h3>
-
-        <div className="tabla-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Detalle</th>
-                <th>Valor</th>
-                <th>Saldo</th>
-                <th>Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {records.map(r => (
-                <tr key={r.id}>
-                  <td>{r.fecha}</td>
-                  <td>{r.nombre}</td>
-                  <td>${r.valor}</td>
-                  <td>${r.saldo}</td>
-                  <td>
-                    <button className="btn-warning" onClick={() => editarMovimiento(r)}>
-                      ✏️
-                    </button>
-                    <button className="btn-danger" onClick={() => eliminarMovimiento(r.id)}>
-                      🗑️
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* AQUÍ PEGAS TODO TU COMPONENTE ACTUAL */}
+      {/* Puedes mover tu código actual aquí */}
+      <h2>App protegida 🔐</h2>
     </div>
   );
 }
