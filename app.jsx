@@ -7,27 +7,6 @@ const supabase = window.supabase.createClient(
 );
 
 function App() {
-
-  /* ======================= AUTH ======================= */
-  const [session, setSession] = useState(null);
-  const [loadingAuth, setLoadingAuth] = useState(true);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoadingAuth(false);
-    });
-
-    supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-  }, []);
-
-  if (loadingAuth) return <h2>Cargando...</h2>;
-  if (!session) return <Login />;
-
-  /* ======================= TU CÓDIGO ORIGINAL ======================= */
-
   const [inputValue, setInputValue] = useState(0);
   const [inputName, setInputName] = useState("");
   const [inputDate, setInputDate] = useState("");
@@ -39,6 +18,7 @@ function App() {
   const [newGastoName, setNewGastoName] = useState("");
   const [newGastoMonto, setNewGastoMonto] = useState(0);
 
+  //MODO OSCURO
   const [isDark, setIsDark] = useState(false);
 
   const cargarMovimientos = async () => {
@@ -70,6 +50,7 @@ function App() {
     cargarGastos();
   }, []);
 
+  //MODO OSCURO
   useEffect(() => {
     const dark = localStorage.getItem("darkMode") === "true";
     if (dark) {
@@ -150,6 +131,7 @@ function App() {
     cargarGastos();
   };
 
+  //MODO OSCURO
   const toggleDarkMode = () => {
     const newMode = !isDark;
     setIsDark(newMode);
@@ -160,32 +142,6 @@ function App() {
   return (
     <div className="container">
       <h2>Control de Ingresos y Gastos</h2>
-
-      <div style={{ marginBottom: "15px" }}>
-        <button onClick={() => supabase.auth.signOut()}>
-          Cerrar sesión
-        </button>
-
-        <button
-          style={{ marginLeft: "10px" }}
-          onClick={async () => {
-            const email = prompt("Correo nuevo usuario:");
-            const password = prompt("Contraseña:");
-
-            if (!email || !password) return;
-
-            const { error } = await supabase.auth.signUp({
-              email,
-              password
-            });
-
-            if (error) alert(error.message);
-            else alert("Usuario creado correctamente");
-          }}
-        >
-          Crear usuario
-        </button>
-      </div>
 
       <button onClick={toggleDarkMode} className="dark-toggle">
         {isDark ? "☀️" : "🌙"}
@@ -226,68 +182,93 @@ function App() {
         <strong>Ahorro disponible</strong>
         <span>${ahorroTotal.toFixed(2)}</span>
       </div>
-    </div>
-  );
-}
 
-/* ======================= LOGIN ======================= */
+      <div className="card">
+        <h3>Gastos / Deudas</h3>
 
-function Login() {
-  const [email, setEmail] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [showPass, setShowPass] = React.useState(false);
+        <div className="row">
+          <input
+            placeholder="Nombre del gasto"
+            value={newGastoName}
+            onChange={e => setNewGastoName(e.target.value)}
+          />
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      alert("Completa todos los campos");
-      return;
-    }
+          <input
+            type="number"
+            placeholder="Monto"
+            value={newGastoMonto}
+            onChange={e => setNewGastoMonto(e.target.value)}
+          />
+        </div>
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (error) alert(error.message);
-  };
-
-  return (
-    <div className="container">
-      <h2>Iniciar Sesión</h2>
-
-      <input
-        type="email"
-        placeholder="Correo"
-        value={email}
-        onChange={e => setEmail(e.target.value)}
-      />
-
-      <div style={{ position: "relative" }}>
-        <input
-          type={showPass ? "text" : "password"}
-          placeholder="Contraseña"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-        />
-        <button
-          type="button"
-          style={{
-            position: "absolute",
-            right: "5px",
-            top: "5px",
-            padding: "5px 10px"
-          }}
-          onClick={() => setShowPass(!showPass)}
-        >
-          👁
+        <button className="btn-success" onClick={addGasto}>
+          Agregar gasto
         </button>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Gasto</th>
+              <th>Monto</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            {gastos.map(g => (
+              <tr key={g.id}>
+                <td>{g.fecha?.slice(0,10)}</td>
+                <td>{g.nombre}</td>
+                <td>${g.monto}</td>
+                <td>
+                  <button className="btn-danger" onClick={() => removeGasto(g.id)}>
+                    🗑️
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
-      <button onClick={handleLogin}>
-        Entrar
-      </button>
+      <div className="card">
+        <h3>Registros</h3>
+
+        <div className="tabla-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Detalle</th>
+                <th>Valor</th>
+                <th>Saldo</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {records.map(r => (
+                <tr key={r.id}>
+                  <td>{r.fecha}</td>
+                  <td>{r.nombre}</td>
+                  <td>${r.valor}</td>
+                  <td>${r.saldo}</td>
+                  <td>
+                    <button className="btn-warning" onClick={() => editarMovimiento(r)}>
+                      ✏️
+                    </button>
+                    <button className="btn-danger" onClick={() => eliminarMovimiento(r.id)}>
+                      🗑️
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+
