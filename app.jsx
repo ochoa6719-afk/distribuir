@@ -1,34 +1,101 @@
 const { useState, useEffect, useRef } = React;
 
-/* =======================
-   SUPABASE CONFIG
-======================= */
 const supabase = window.supabase.createClient(
   "https://chpvbydpaztzbxdacqwe.supabase.co/",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNocHZieWRwYXp0emJ4ZGFjcXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2OTIyMjcsImV4cCI6MjA4NTI2ODIyN30.4gWLzTt8rk6LI13xSLI7rNmE21HgV9GAq8Lg_lk3SWo"
 );
 
 function App() {
+
+  /* ================= AUTH ================= */
+  const [session, setSession] = useState(null);
+  const [nombres, setNombres] = useState("");
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+
+  /* ================= SISTEMA ================= */
   const [inputValue, setInputValue] = useState(0);
   const [inputName, setInputName] = useState("");
   const [inputDate, setInputDate] = useState("");
-
   const [records, setRecords] = useState([]);
   const [editId, setEditId] = useState(null);
-
-  const formRef = useRef(null);
-
   const [gastos, setGastos] = useState([]);
   const [newGastoName, setNewGastoName] = useState("");
   const [newGastoMonto, setNewGastoMonto] = useState(0);
-  
-  //MODO OSCURO
-  const [isDark, setIsDark] = useState(false);
+  const formRef = useRef(null);
 
+  /* ================= SESSION ================= */
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => setSession(session)
+    );
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  /* ================= LOGIN ================= */
+  const signIn = async () => {
+    const { data } = await supabase
+      .from("perfiles")
+      .select("email")
+      .eq("username", username)
+      .single();
+
+    if (!data) {
+      alert("Usuario no encontrado");
+      return;
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password,
+    });
+
+    if (error) alert(error.message);
+  };
+
+  /* ================= REGISTRO ================= */
+  const signUp = async () => {
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    if (data.user) {
+      await supabase.from("perfiles").insert([{
+        id: data.user.id,
+        nombres,
+        username,
+        email
+      }]);
+    }
+
+    alert("Usuario creado correctamente");
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+  };
+
+  /* ================= CARGAR DATOS ================= */
   const cargarMovimientos = async () => {
     const { data } = await supabase
       .from("movimientos")
       .select("*")
+      .eq("user_id", session.user.id)
       .order("fecha", { ascending: true });
 
     let saldo = 0;
@@ -45,33 +112,23 @@ function App() {
     const { data } = await supabase
       .from("gastos")
       .select("*")
+      .eq("user_id", session.user.id)
       .order("fecha");
 
     setGastos(data || []);
   };
 
   useEffect(() => {
-    cargarMovimientos();
-    cargarGastos();
-  }, []);
-
-  //MODO OSCURO
-useEffect(() => {
-  const dark = localStorage.getItem("darkMode") === "true";
-  if (dark) {
-    document.body.classList.add("dark");
-  }
-  setIsDark(dark);
-}, []);
-
+    if (session) {
+      cargarMovimientos();
+      cargarGastos();
+    }
+  }, [session]);
 
   const ahorroTotal = records.reduce((s, r) => s + Number(r.valor), 0);
 
+  /* ================= MOVIMIENTOS ================= */
   const handleSubmit = async () => {
-    if (!inputName || !inputDate) {
-      alert("Completa todos los campos");
-      return;
-    }
 
     if (editId) {
       await supabase
@@ -84,11 +141,14 @@ useEffect(() => {
         .eq("id", editId);
 
       setEditId(null);
+
     } else {
+
       await supabase.from("movimientos").insert([{
         nombre: inputName,
         valor: Number(inputValue),
-        fecha: inputDate
+        fecha: inputDate,
+        user_id: session.user.id
       }]);
     }
 
@@ -104,33 +164,16 @@ useEffect(() => {
     cargarMovimientos();
   };
 
-  const editarMovimiento = (mov) => {
-    setEditId(mov.id);
-    setInputName(mov.nombre);
-    setInputValue(mov.valor);
-    setInputDate(mov.fecha);
-
-    formRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "start"
-    });
-  };
-
   const addGasto = async () => {
-    if (!newGastoName || !newGastoMonto) {
-      alert("Completa nombre y monto del gasto");
-      return;
-    }
-
     await supabase.from("gastos").insert([{
       nombre: newGastoName,
       monto: Number(newGastoMonto),
-      fecha: new Date()
+      fecha: new Date(),
+      user_id: session.user.id
     }]);
 
     setNewGastoName("");
     setNewGastoMonto(0);
-
     cargarGastos();
   };
 
@@ -139,156 +182,42 @@ useEffect(() => {
     cargarGastos();
   };
 
-  //MODO OSCURO
-const toggleDarkMode = () => {
-  const newMode = !isDark;
-  setIsDark(newMode);
+  /* ================= LOGIN SCREEN ================= */
+  if (!session) {
+    return (
+      <div className="container">
+        <h2>Acceso al Sistema</h2>
 
-  document.body.classList.toggle("dark", newMode);
-  localStorage.setItem("darkMode", newMode);
-};
+        <input placeholder="Nombres" value={nombres}
+          onChange={e => setNombres(e.target.value)} />
 
-//MODO OSCURO EN </button>
+        <input placeholder="Correo" value={email}
+          onChange={e => setEmail(e.target.value)} />
+
+        <input placeholder="Nombre de usuario" value={username}
+          onChange={e => setUsername(e.target.value)} />
+
+        <input type="password" placeholder="Contraseña"
+          value={password}
+          onChange={e => setPassword(e.target.value)} />
+
+        <button onClick={signIn}>Ingresar</button>
+        <button onClick={signUp}>Crear cuenta</button>
+      </div>
+    );
+  }
+
+  /* ================= SISTEMA ================= */
   return (
     <div className="container">
 
+      <button onClick={signOut}>Cerrar sesión</button>
+
       <h2>Control de Ingresos y Gastos</h2>
-
-<button
-  onClick={toggleDarkMode}
-  className="dark-toggle"
->
-  {isDark ? "☀️" : "🌙"}
-</button>
-
-
-      <div className="card" ref={formRef}>
-        <h3>{editId ? "Editar movimiento" : "Nuevo movimiento"}</h3>
-
-        <div className="row">
-          <input
-            placeholder="Descripción"
-            value={inputName}
-            onChange={e => setInputName(e.target.value)}
-          />
-        </div>
-
-        <div className="row">
-          <input
-            type="number"
-            placeholder="Valor (+ ingreso / - gasto)"
-            value={inputValue}
-            onChange={e => setInputValue(e.target.value)}
-          />
-          <input
-            type="date"
-            value={inputDate}
-            onChange={e => setInputDate(e.target.value)}
-          />
-        </div>
-
-        <button className="btn-primary" onClick={handleSubmit}>
-          {editId ? "Actualizar" : "Guardar"}
-        </button>
-      </div>
 
       <div className="ahorro">
         <strong>Ahorro disponible</strong>
         <span>${ahorroTotal.toFixed(2)}</span>
-      </div>
-
-      <div className="card">
-        <h3>Gastos / Deudas</h3>
-
-        <div className="row">
-          <input
-            placeholder="Nombre del gasto"
-            value={newGastoName}
-            onChange={e => setNewGastoName(e.target.value)}
-          />
-          <input
-            type="number"
-            placeholder="Monto"
-            value={newGastoMonto}
-            onChange={e => setNewGastoMonto(e.target.value)}
-          />
-        </div>
-
-        <button className="btn-success" onClick={addGasto}>
-          Agregar gasto
-        </button>
-
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Gasto</th>
-              <th>Monto</th>
-              <th>Acción</th>
-            </tr>
-          </thead>
-          <tbody>
-            {gastos.map(g => (
-              <tr key={g.id}>
-                <td>{g.fecha?.slice(0,10)}</td>
-                <td>{g.nombre}</td>
-                <td>${g.monto}</td>
-                <td>
-                  <button
-                    className="btn-danger"
-                    onClick={() => removeGasto(g.id)}
-                  >
-                    🗑️
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* ===== REGISTROS (CON SCROLL) ===== */}
-      <div className="card">
-        <h3>Registros</h3>
-
-        <div className="tabla-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Detalle</th>
-                <th>Valor</th>
-                <th>Saldo</th>
-                <th>Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {records.map(r => (
-                <tr key={r.id}>
-                  <td>{r.fecha}</td>
-                  <td>{r.nombre}</td>
-                  <td>${r.valor}</td>
-                  <td>${r.saldo}</td>
-                  <td>
-                    <button
-                      className="btn-warning"
-                      onClick={() => editarMovimiento(r)}
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      className="btn-danger"
-                      onClick={() => eliminarMovimiento(r.id)}
-                    >
-                      🗑️
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
       </div>
 
     </div>
