@@ -191,8 +191,6 @@ function App() {
         {isDark ? "☀️" : "🌙"}
       </button>
 
-      {/* TU INTERFAZ ORIGINAL SIGUE EXACTAMENTE IGUAL */}
-
       <div className="card" ref={formRef}>
         <h3>{editId ? "Editar movimiento" : "Nuevo movimiento"}</h3>
 
@@ -228,8 +226,6 @@ function App() {
         <strong>Ahorro disponible</strong>
         <span>${ahorroTotal.toFixed(2)}</span>
       </div>
-
-      {/* RESTO DE TU CÓDIGO SIN CAMBIOS */}
     </div>
   );
 }
