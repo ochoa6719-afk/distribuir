@@ -7,73 +7,20 @@ const supabase = window.supabase.createClient(
 );
 
 function App() {
-
-  /* ======================= AUTH STATES ======================= */
-  const [session, setSession] = useState(null);
-  const [loginUsername, setLoginUsername] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-
-  /* ======================= APP STATES ======================= */
   const [inputValue, setInputValue] = useState(0);
   const [inputName, setInputName] = useState("");
   const [inputDate, setInputDate] = useState("");
   const [records, setRecords] = useState([]);
   const [editId, setEditId] = useState(null);
   const formRef = useRef(null);
+
   const [gastos, setGastos] = useState([]);
   const [newGastoName, setNewGastoName] = useState("");
   const [newGastoMonto, setNewGastoMonto] = useState(0);
+
+  //MODO OSCURO
   const [isDark, setIsDark] = useState(false);
 
-  /* ======================= AUTH EFFECT ======================= */
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-    });
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => {
-      listener.subscription.unsubscribe();
-    };
-  }, []);
-
-  /* ======================= LOGIN ======================= */
-  const handleLogin = async () => {
-
-    if (!loginUsername || !loginPassword) {
-      alert("Completa usuario y contraseña");
-      return;
-    }
-
-    const { data: userData, error: userError } = await supabase
-      .from("perfiles")
-      .select("email")
-      .eq("username", loginUsername)
-      .single();
-
-    if (userError || !userData) {
-      alert("Usuario no encontrado");
-      return;
-    }
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email: userData.email,
-      password: loginPassword,
-    });
-
-    if (error) {
-      alert("Contraseña incorrecta");
-    }
-  };
-
-  const cerrarSesion = async () => {
-    await supabase.auth.signOut();
-  };
-
-  /* ======================= DATA LOAD ======================= */
   const cargarMovimientos = async () => {
     const { data } = await supabase
       .from("movimientos")
@@ -99,21 +46,21 @@ function App() {
   };
 
   useEffect(() => {
-    if (session) {
-      cargarMovimientos();
-      cargarGastos();
-    }
-  }, [session]);
+    cargarMovimientos();
+    cargarGastos();
+  }, []);
 
+  //MODO OSCURO
   useEffect(() => {
     const dark = localStorage.getItem("darkMode") === "true";
-    if (dark) document.body.classList.add("dark");
+    if (dark) {
+      document.body.classList.add("dark");
+    }
     setIsDark(dark);
   }, []);
 
   const ahorroTotal = records.reduce((s, r) => s + Number(r.valor), 0);
 
-  /* ======================= CRUD ======================= */
   const handleSubmit = async () => {
     if (!inputName || !inputDate) {
       alert("Completa todos los campos");
@@ -121,13 +68,22 @@ function App() {
     }
 
     if (editId) {
-      await supabase.from("movimientos")
-        .update({ nombre: inputName, valor: Number(inputValue), fecha: inputDate })
+      await supabase
+        .from("movimientos")
+        .update({
+          nombre: inputName,
+          valor: Number(inputValue),
+          fecha: inputDate
+        })
         .eq("id", editId);
+
       setEditId(null);
     } else {
-      await supabase.from("movimientos")
-        .insert([{ nombre: inputName, valor: Number(inputValue), fecha: inputDate }]);
+      await supabase.from("movimientos").insert([{
+        nombre: inputName,
+        valor: Number(inputValue),
+        fecha: inputDate
+      }]);
     }
 
     setInputName("");
@@ -146,12 +102,16 @@ function App() {
     setInputName(mov.nombre);
     setInputValue(mov.valor);
     setInputDate(mov.fecha);
-    formRef.current?.scrollIntoView({ behavior: "smooth" });
+
+    formRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
   };
 
   const addGasto = async () => {
     if (!newGastoName || !newGastoMonto) {
-      alert("Completa nombre y monto");
+      alert("Completa nombre y monto del gasto");
       return;
     }
 
@@ -171,6 +131,7 @@ function App() {
     cargarGastos();
   };
 
+  //MODO OSCURO
   const toggleDarkMode = () => {
     const newMode = !isDark;
     setIsDark(newMode);
@@ -178,41 +139,133 @@ function App() {
     localStorage.setItem("darkMode", newMode);
   };
 
-  /* ======================= LOGIN SCREEN ======================= */
-  if (!session) {
-    return (
-      <div className="container">
-        <h2>Iniciar Sesión</h2>
-        <input
-          placeholder="Usuario"
-          value={loginUsername}
-          onChange={e => setLoginUsername(e.target.value)}
-        />
-        <input
-          type="password"
-          placeholder="Contraseña"
-          value={loginPassword}
-          onChange={e => setLoginPassword(e.target.value)}
-        />
-        <button onClick={handleLogin}>Ingresar</button>
-      </div>
-    );
-  }
-
-  /* ======================= MAIN APP ======================= */
   return (
     <div className="container">
-
-      <button onClick={cerrarSesion}>Cerrar sesión</button>
-
       <h2>Control de Ingresos y Gastos</h2>
 
       <button onClick={toggleDarkMode} className="dark-toggle">
         {isDark ? "☀️" : "🌙"}
       </button>
 
-      {/* AQUÍ SIGUE TODO TU SISTEMA IGUAL */}
-      
+      <div className="card" ref={formRef}>
+        <h3>{editId ? "Editar movimiento" : "Nuevo movimiento"}</h3>
+
+        <div className="row">
+          <input
+            placeholder="Descripción"
+            value={inputName}
+            onChange={e => setInputName(e.target.value)}
+          />
+        </div>
+
+        <div className="row">
+          <input
+            type="number"
+            placeholder="Valor (+ ingreso / - gasto)"
+            value={inputValue}
+            onChange={e => setInputValue(e.target.value)}
+          />
+
+          <input
+            type="date"
+            value={inputDate}
+            onChange={e => setInputDate(e.target.value)}
+          />
+        </div>
+
+        <button className="btn-primary" onClick={handleSubmit}>
+          {editId ? "Actualizar" : "Guardar"}
+        </button>
+      </div>
+
+      <div className="ahorro">
+        <strong>Ahorro disponible</strong>
+        <span>${ahorroTotal.toFixed(2)}</span>
+      </div>
+
+      <div className="card">
+        <h3>Gastos / Deudas</h3>
+
+        <div className="row">
+          <input
+            placeholder="Nombre del gasto"
+            value={newGastoName}
+            onChange={e => setNewGastoName(e.target.value)}
+          />
+
+          <input
+            type="number"
+            placeholder="Monto"
+            value={newGastoMonto}
+            onChange={e => setNewGastoMonto(e.target.value)}
+          />
+        </div>
+
+        <button className="btn-success" onClick={addGasto}>
+          Agregar gasto
+        </button>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Gasto</th>
+              <th>Monto</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            {gastos.map(g => (
+              <tr key={g.id}>
+                <td>{g.fecha?.slice(0,10)}</td>
+                <td>{g.nombre}</td>
+                <td>${g.monto}</td>
+                <td>
+                  <button className="btn-danger" onClick={() => removeGasto(g.id)}>
+                    🗑️
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="card">
+        <h3>Registros</h3>
+
+        <div className="tabla-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Detalle</th>
+                <th>Valor</th>
+                <th>Saldo</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {records.map(r => (
+                <tr key={r.id}>
+                  <td>{r.fecha}</td>
+                  <td>{r.nombre}</td>
+                  <td>${r.valor}</td>
+                  <td>${r.saldo}</td>
+                  <td>
+                    <button className="btn-warning" onClick={() => editarMovimiento(r)}>
+                      ✏️
+                    </button>
+                    <button className="btn-danger" onClick={() => eliminarMovimiento(r.id)}>
+                      🗑️
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
