@@ -13,18 +13,43 @@ function App() {
   const [records, setRecords] = useState([]);
   const [editId, setEditId] = useState(null);
   const formRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const [gastos, setGastos] = useState([]);
   const [newGastoName, setNewGastoName] = useState("");
   const [newGastoMonto, setNewGastoMonto] = useState(0);
 
+  // PERFILES
+  const [perfiles, setPerfiles] = useState([]);
+  const [perfilActivo, setPerfilActivo] = useState(
+    localStorage.getItem("perfilActivo") || ""
+  );
+  const [nuevoPerfilNombre, setNuevoPerfilNombre] = useState("");
+
   //MODO OSCURO
   const [isDark, setIsDark] = useState(false);
 
-  const cargarMovimientos = async () => {
+  const cargarPerfiles = async () => {
+    const { data } = await supabase
+      .from("perfiles_app")
+      .select("*")
+      .order("id", { ascending: true });
+
+    const lista = data || [];
+    setPerfiles(lista);
+
+    if (!perfilActivo && lista.length > 0) {
+      setPerfilActivo(lista[0].nombre);
+      localStorage.setItem("perfilActivo", lista[0].nombre);
+    }
+  };
+
+  const cargarMovimientos = async (perfil) => {
+    if (!perfil) { setRecords([]); return; }
     const { data } = await supabase
       .from("movimientos")
       .select("*")
+      .eq("perfil", perfil)
       .order("fecha", { ascending: true });
 
     let saldo = 0;
@@ -36,19 +61,27 @@ function App() {
     setRecords(conSaldo);
   };
 
-  const cargarGastos = async () => {
+  const cargarGastos = async (perfil) => {
+    if (!perfil) { setGastos([]); return; }
     const { data } = await supabase
       .from("gastos")
       .select("*")
+      .eq("perfil", perfil)
       .order("fecha");
 
     setGastos(data || []);
   };
 
   useEffect(() => {
-    cargarMovimientos();
-    cargarGastos();
+    cargarPerfiles();
   }, []);
+
+  useEffect(() => {
+    if (perfilActivo) {
+      cargarMovimientos(perfilActivo);
+      cargarGastos(perfilActivo);
+    }
+  }, [perfilActivo]);
 
   //MODO OSCURO
   useEffect(() => {
@@ -60,6 +93,48 @@ function App() {
   }, []);
 
   const ahorroTotal = records.reduce((s, r) => s + Number(r.valor), 0);
+
+  const cambiarPerfil = (nombre) => {
+    setPerfilActivo(nombre);
+    localStorage.setItem("perfilActivo", nombre);
+    setEditId(null);
+  };
+
+  const crearPerfil = async () => {
+    const nombre = nuevoPerfilNombre.trim();
+    if (!nombre) {
+      alert("Escribe un nombre para el nuevo perfil");
+      return;
+    }
+    if (perfiles.some(p => p.nombre.toLowerCase() === nombre.toLowerCase())) {
+      alert("Ya existe un perfil con ese nombre");
+      return;
+    }
+
+    await supabase.from("perfiles_app").insert([{ nombre }]);
+    setNuevoPerfilNombre("");
+    await cargarPerfiles();
+    cambiarPerfil(nombre);
+  };
+
+  const eliminarPerfil = async (nombre) => {
+    if (perfiles.length <= 1) {
+      alert("Debe quedar al menos un perfil");
+      return;
+    }
+    const ok = confirm(
+      `¿Eliminar el perfil "${nombre}"? Esto borrará TODOS sus movimientos y gastos.`
+    );
+    if (!ok) return;
+
+    await supabase.from("movimientos").delete().eq("perfil", nombre);
+    await supabase.from("gastos").delete().eq("perfil", nombre);
+    await supabase.from("perfiles_app").delete().eq("nombre", nombre);
+
+    const restantes = perfiles.filter(p => p.nombre !== nombre);
+    await cargarPerfiles();
+    if (restantes.length > 0) cambiarPerfil(restantes[0].nombre);
+  };
 
   const handleSubmit = async () => {
     if (!inputName || !inputDate) {
@@ -82,19 +157,20 @@ function App() {
       await supabase.from("movimientos").insert([{
         nombre: inputName,
         valor: Number(inputValue),
-        fecha: inputDate
+        fecha: inputDate,
+        perfil: perfilActivo
       }]);
     }
 
     setInputName("");
     setInputValue(0);
     setInputDate("");
-    cargarMovimientos();
+    cargarMovimientos(perfilActivo);
   };
 
   const eliminarMovimiento = async (id) => {
     await supabase.from("movimientos").delete().eq("id", id);
-    cargarMovimientos();
+    cargarMovimientos(perfilActivo);
   };
 
   const editarMovimiento = (mov) => {
@@ -118,17 +194,18 @@ function App() {
     await supabase.from("gastos").insert([{
       nombre: newGastoName,
       monto: Number(newGastoMonto),
-      fecha: new Date()
+      fecha: new Date(),
+      perfil: perfilActivo
     }]);
 
     setNewGastoName("");
     setNewGastoMonto(0);
-    cargarGastos();
+    cargarGastos(perfilActivo);
   };
 
   const removeGasto = async (id) => {
     await supabase.from("gastos").delete().eq("id", id);
-    cargarGastos();
+    cargarGastos(perfilActivo);
   };
 
   //MODO OSCURO
@@ -139,6 +216,97 @@ function App() {
     localStorage.setItem("darkMode", newMode);
   };
 
+  /* ======================= RESPALDOS ======================= */
+  const descargarRespaldo = async () => {
+    const { data: todosMovimientos } = await supabase.from("movimientos").select("*");
+    const { data: todosGastos } = await supabase.from("gastos").select("*");
+    const { data: todosPerfiles } = await supabase.from("perfiles_app").select("*");
+
+    const respaldo = {
+      fecha_respaldo: new Date().toISOString(),
+      perfiles: todosPerfiles || [],
+      movimientos: todosMovimientos || [],
+      gastos: todosGastos || []
+    };
+
+    const blob = new Blob([JSON.stringify(respaldo, null, 2)], {
+      type: "application/json"
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const fechaArchivo = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `respaldo-distribuidor-${fechaArchivo}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const restaurarTodoVacio = async () => {
+    const ok = confirm(
+      "⚠️ Esto va a BORRAR todos los movimientos y gastos de TODOS los perfiles. Esta acción no se puede deshacer.\n\n¿Estás seguro?"
+    );
+    if (!ok) return;
+
+    const ok2 = confirm("Última confirmación: ¿de verdad quieres dejar todo sin información?");
+    if (!ok2) return;
+
+    await supabase.from("movimientos").delete().neq("id", 0);
+    await supabase.from("gastos").delete().neq("id", 0);
+
+    cargarMovimientos(perfilActivo);
+    cargarGastos(perfilActivo);
+    alert("Listo, toda la información fue borrada.");
+  };
+
+  const subirRespaldo = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const contenido = JSON.parse(event.target.result);
+
+        const ok = confirm(
+          "Esto va a REEMPLAZAR toda la información actual con la del respaldo. ¿Continuar?"
+        );
+        if (!ok) {
+          e.target.value = "";
+          return;
+        }
+
+        await supabase.from("movimientos").delete().neq("id", 0);
+        await supabase.from("gastos").delete().neq("id", 0);
+        await supabase.from("perfiles_app").delete().neq("id", 0);
+
+        const perfilesLimpios = (contenido.perfiles || []).map(p => ({ nombre: p.nombre }));
+        const movimientosLimpios = (contenido.movimientos || []).map(({ id, ...resto }) => resto);
+        const gastosLimpios = (contenido.gastos || []).map(({ id, ...resto }) => resto);
+
+        if (perfilesLimpios.length > 0) {
+          await supabase.from("perfiles_app").insert(perfilesLimpios);
+        }
+        if (movimientosLimpios.length > 0) {
+          await supabase.from("movimientos").insert(movimientosLimpios);
+        }
+        if (gastosLimpios.length > 0) {
+          await supabase.from("gastos").insert(gastosLimpios);
+        }
+
+        await cargarPerfiles();
+        cargarMovimientos(perfilActivo);
+        cargarGastos(perfilActivo);
+        alert("Respaldo restaurado correctamente.");
+      } catch (err) {
+        alert("El archivo no es un respaldo válido.");
+      }
+      e.target.value = "";
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div className="container">
       <h2>Control de Ingresos y Gastos</h2>
@@ -146,6 +314,68 @@ function App() {
       <button onClick={toggleDarkMode} className="dark-toggle">
         {isDark ? "☀️" : "🌙"}
       </button>
+
+      <div className="card perfiles-card">
+        <h3>Perfil</h3>
+
+        {perfiles.length === 0 && <p>Crea tu primer perfil para empezar 👆</p>}
+
+        <div className="perfiles-tabs">
+          {perfiles.map(p => (
+            <button
+              key={p.id}
+              className={`perfil-tab ${p.nombre === perfilActivo ? "activo" : ""}`}
+              onClick={() => cambiarPerfil(p.nombre)}
+            >
+              {p.nombre}
+            </button>
+          ))}
+        </div>
+
+        <div className="row">
+          <input
+            placeholder="Nombre del nuevo perfil (ej. Persona 2)"
+            value={nuevoPerfilNombre}
+            onChange={e => setNuevoPerfilNombre(e.target.value)}
+          />
+          <button className="btn-primary" onClick={crearPerfil}>
+            + Crear perfil
+          </button>
+        </div>
+
+        {perfilActivo && (
+          <button
+            className="btn-danger btn-eliminar-perfil"
+            onClick={() => eliminarPerfil(perfilActivo)}
+          >
+            🗑️ Eliminar perfil "{perfilActivo}"
+          </button>
+        )}
+      </div>
+
+      <div className="card respaldo-card">
+        <h3>Respaldo de información</h3>
+        <div className="respaldo-botones">
+          <button className="btn-success" onClick={descargarRespaldo}>
+            ⬇️ Bajar respaldo
+          </button>
+
+          <button className="btn-primary" onClick={() => fileInputRef.current.click()}>
+            ⬆️ Subir respaldo
+          </button>
+          <input
+            type="file"
+            accept=".json"
+            ref={fileInputRef}
+            onChange={subirRespaldo}
+            style={{ display: "none" }}
+          />
+
+          <button className="btn-danger" onClick={restaurarTodoVacio}>
+            ♻️ Restaurar todo (dejar vacío)
+          </button>
+        </div>
+      </div>
 
       <div className="card" ref={formRef}>
         <h3>{editId ? "Editar movimiento" : "Nuevo movimiento"}</h3>
@@ -179,7 +409,7 @@ function App() {
       </div>
 
       <div className="ahorro">
-        <strong>Ahorro disponible</strong>
+        <strong>Ahorro disponible {perfilActivo ? `(${perfilActivo})` : ""}</strong>
         <span>${ahorroTotal.toFixed(2)}</span>
       </div>
 
@@ -271,4 +501,3 @@ function App() {
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
-

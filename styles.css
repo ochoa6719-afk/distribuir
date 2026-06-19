@@ -206,3 +206,46 @@ body.dark .ahorro span {
   color: #ecfdf5;
   text-shadow: 0 4px 12px rgba(16, 185, 129, 0.6);
 }
+
+/* ======================= PERFILES ======================= */
+.perfiles-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.perfil-tab {
+  background: #e5f5ec;
+  color: #1b4332;
+  border: 2px solid transparent;
+}
+
+.perfil-tab.activo {
+  background: #40916c;
+  color: white;
+  border-color: #1b4332;
+}
+
+.btn-eliminar-perfil {
+  margin-top: 10px;
+}
+
+/* ======================= RESPALDOS ======================= */
+.respaldo-botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* ======================= MODO OSCURO: PERFILES Y RESPALDO ======================= */
+body.dark .perfil-tab {
+  background: #0f172a;
+  color: #d1fae5;
+}
+
+body.dark .perfil-tab.activo {
+  background: #10b981;
+  color: #022c22;
+  border-color: #34d399;
+}
