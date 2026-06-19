@@ -29,20 +29,25 @@ function App() {
   //MODO OSCURO
   const [isDark, setIsDark] = useState(false);
 
-  const cargarPerfiles = async () => {
-    const { data } = await supabase
-      .from("perfiles_app")
-      .select("*")
-      .order("id", { ascending: true });
+const cargarPerfiles = async () => {
+  const { data, error } = await supabase
+    .from("perfiles_app")
+    .select("*")
+    .order("id", { ascending: true });
 
-    const lista = data || [];
-    setPerfiles(lista);
+  if (error) {
+    console.error("Error cargando perfiles:", error);
+    return;
+  }
 
-    if (!perfilActivo && lista.length > 0) {
-      setPerfilActivo(lista[0].nombre);
-      localStorage.setItem("perfilActivo", lista[0].nombre);
-    }
-  };
+  const lista = data || [];
+  setPerfiles(lista);
+
+  if (!perfilActivo && lista.length > 0) {
+    setPerfilActivo(lista[0].nombre);
+    localStorage.setItem("perfilActivo", lista[0].nombre);
+  }
+};
 
   const cargarMovimientos = async (perfil) => {
     if (!perfil) { setRecords([]); return; }
@@ -100,22 +105,35 @@ function App() {
     setEditId(null);
   };
 
-  const crearPerfil = async () => {
-    const nombre = nuevoPerfilNombre.trim();
-    if (!nombre) {
-      alert("Escribe un nombre para el nuevo perfil");
-      return;
-    }
-    if (perfiles.some(p => p.nombre.toLowerCase() === nombre.toLowerCase())) {
-      alert("Ya existe un perfil con ese nombre");
-      return;
-    }
+const crearPerfil = async () => {
+  const nombre = nuevoPerfilNombre.trim();
 
-    await supabase.from("perfiles_app").insert([{ nombre }]);
-    setNuevoPerfilNombre("");
-    await cargarPerfiles();
-    cambiarPerfil(nombre);
-  };
+  if (!nombre) {
+    alert("Escribe un nombre para el nuevo perfil");
+    return;
+  }
+
+  if (perfiles.some(p => p.nombre.toLowerCase() === nombre.toLowerCase())) {
+    alert("Ya existe un perfil con ese nombre");
+    return;
+  }
+
+  const { error } = await supabase
+    .from("perfiles_app")
+    .insert([{ nombre }]);
+
+  if (error) {
+    console.error("Error creando perfil:", error);
+    alert(
+      "No se pudo crear el perfil. Revisa la consola (F12) para ver el error exacto."
+    );
+    return;
+  }
+
+  setNuevoPerfilNombre("");
+  await cargarPerfiles();
+  cambiarPerfil(nombre);
+};
 
   const eliminarPerfil = async (nombre) => {
     if (perfiles.length <= 1) {
