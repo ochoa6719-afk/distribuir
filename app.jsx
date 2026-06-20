@@ -422,78 +422,91 @@ function App() {
     );
   }
 
-  return (
+return (
     <div className="container">
       <h2>Control de Ingresos y Gastos</h2>
-
-      <button onClick={cerrarSesion} className="logout-btn">
-        🔒 Cerrar sesión
-      </button>
 
       <button onClick={toggleDarkMode} className="dark-toggle">
         {isDark ? "☀️" : "🌙"}
       </button>
 
+      <div className="card cuenta-card">
+        <h3>Cuenta</h3>
+        <div className="cuenta-info">
+          <span>Sesión iniciada como <strong>{session.user.email}</strong></span>
+          <button className="btn-danger" onClick={cerrarSesion}>
+            🔒 Cerrar sesión
+          </button>
+        </div>
+      </div>
+
       <div className="card perfiles-card">
         <h3>Perfil</h3>
 
-        {perfiles.length === 0 && <p>Crea tu primer perfil para empezar 👆</p>}
+        {perfiles.length === 0 && <p className="hint-text">Crea tu primer perfil para empezar 👆</p>}
 
         <div className="perfiles-tabs">
           {perfiles.map(p => (
-            <button
-              key={p.id}
-              className={`perfil-tab ${p.nombre === perfilActivo ? "activo" : ""}`}
-              onClick={() => cambiarPerfil(p.nombre)}
-            >
-              {p.nombre}
-            </button>
+            <div key={p.id} className="perfil-tab-wrapper">
+              <button
+                className={`perfil-tab ${p.nombre === perfilActivo ? "activo" : ""}`}
+                onClick={() => cambiarPerfil(p.nombre)}
+              >
+                {p.nombre}
+              </button>
+              {p.nombre === perfilActivo && perfiles.length > 1 && (
+                <button
+                  className="perfil-tab-delete"
+                  title={`Eliminar perfil ${p.nombre}`}
+                  onClick={() => eliminarPerfil(p.nombre)}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           ))}
         </div>
 
-        <div className="row">
+        <div className="perfil-nuevo-row">
           <input
             placeholder="Nombre del nuevo perfil (ej. Persona 2)"
             value={nuevoPerfilNombre}
             onChange={e => setNuevoPerfilNombre(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && crearPerfil()}
           />
           <button className="btn-primary" onClick={crearPerfil}>
-            + Crear perfil
+            + Crear
           </button>
         </div>
-
-        {perfilActivo && (
-          <button
-            className="btn-danger btn-eliminar-perfil"
-            onClick={() => eliminarPerfil(perfilActivo)}
-          >
-            🗑️ Eliminar perfil "{perfilActivo}"
-          </button>
-        )}
       </div>
 
       <div className="card respaldo-card">
         <h3>Respaldo de información</h3>
+        <p className="hint-text">Guarda una copia de tus datos o restáurala desde un archivo.</p>
+
         <div className="respaldo-botones">
-          <button className="btn-success" onClick={descargarRespaldoConfirmado}>
-            ⬇️ Bajar respaldo
+          <button className="btn-respaldo btn-bajar" onClick={descargarRespaldoConfirmado}>
+            <span className="respaldo-icono">⬇️</span>
+            <span>Bajar respaldo</span>
           </button>
 
-          <button className="btn-primary" onClick={subirRespaldoConfirmado}>
-            ⬆️ Subir respaldo
+          <button className="btn-respaldo btn-subir" onClick={subirRespaldoConfirmado}>
+            <span className="respaldo-icono">⬆️</span>
+            <span>Subir respaldo</span>
           </button>
-          <input
-            type="file"
-            accept=".json"
-            ref={fileInputRef}
-            onChange={subirRespaldo}
-            style={{ display: "none" }}
-          />
 
-          <button className="btn-danger" onClick={restaurarTodoConfirmado}>
-            ♻️ Restaurar todo (dejar vacío)
+          <button className="btn-respaldo btn-restaurar" onClick={restaurarTodoConfirmado}>
+            <span className="respaldo-icono">♻️</span>
+            <span>Restaurar todo</span>
           </button>
         </div>
+        <input
+          type="file"
+          accept=".json"
+          ref={fileInputRef}
+          onChange={subirRespaldo}
+          style={{ display: "none" }}
+        />
       </div>
 
       <div className="card" ref={formRef}>

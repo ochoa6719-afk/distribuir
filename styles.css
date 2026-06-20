@@ -296,3 +296,102 @@ body.dark .perfil-tab.activo {
   opacity: 0.7;
   transform: none;
 }
+
+/* ======================= COLORES DE BOTONES ======================= */
+.btn-primary { background: #2563eb; }
+.btn-success { background: #40916c; }
+.btn-danger { background: #dc2626; }
+.btn-warning { background: #f59e0b; color: #1b1b1b; }
+
+/* ======================= TEXTO DE AYUDA ======================= */
+.hint-text {
+  color: #6b7280;
+  font-size: 13px;
+  margin-top: -4px;
+  margin-bottom: 12px;
+}
+
+body.dark .hint-text {
+  color: #94a3b8;
+}
+
+/* ======================= CUENTA ======================= */
+.cuenta-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cuenta-info span {
+  color: #475569;
+  font-size: 14px;
+}
+
+body.dark .cuenta-info span {
+  color: #cbd5e1;
+}
+
+/* ======================= PERFILES (rediseño) ======================= */
+.perfil-tab-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.perfil-tab-delete {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border-radius: 50%;
+  background: #dc2626;
+  color: white;
+  font-size: 11px;
+  line-height: 1;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.perfil-nuevo-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.perfil-nuevo-row input {
+  margin-bottom: 0;
+}
+
+.perfil-nuevo-row button {
+  white-space: nowrap;
+}
+
+/* ======================= RESPALDO (rediseño) ======================= */
+.respaldo-botones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.btn-respaldo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 10px;
+  border-radius: 14px;
+  font-weight: 600;
+}
+
+.respaldo-icono {
+  font-size: 22px;
+}
+
+.btn-bajar { background: #2563eb; }
+.btn-subir { background: #40916c; }
+.btn-restaurar { background: #dc2626; }
