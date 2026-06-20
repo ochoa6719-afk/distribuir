@@ -13,6 +13,7 @@ function App() {
   const [loginUsuario, setLoginUsuario] = useState("");
   const [loginContrasena, setLoginContrasena] = useState("");
   const [loginError, setLoginError] = useState("");
+  const [mostrarContrasena, setMostrarContrasena] = useState(false);
 
   const [inputValue, setInputValue] = useState(0);
   const [inputName, setInputName] = useState("");
@@ -57,13 +58,16 @@ function App() {
       return;
     }
 
-    const email = `${loginUsuario.trim().toLowerCase()}@tuapp.local`;
+    const valor = loginUsuario.trim().toLowerCase();
+    const email = valor.includes("@") ? valor : `${valor}@tuapp.local`;
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password: loginContrasena
     });
 
     if (error) {
+      console.error("Error de login:", error.message);
       setLoginError("Usuario o contraseña incorrectos");
       return;
     }
@@ -368,7 +372,6 @@ function App() {
     reader.readAsText(file);
   };
 
-  // Versiones protegidas con contraseña
   const descargarRespaldoConfirmado = async () => {
     if (await verificarContrasena()) descargarRespaldo();
   };
@@ -396,13 +399,22 @@ function App() {
           value={loginUsuario}
           onChange={e => setLoginUsuario(e.target.value)}
         />
-        <input
-          type="password"
-          placeholder="Contraseña"
-          value={loginContrasena}
-          onChange={e => setLoginContrasena(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && iniciarSesion()}
-        />
+        <div className="password-wrapper">
+          <input
+            type={mostrarContrasena ? "text" : "password"}
+            placeholder="Contraseña"
+            value={loginContrasena}
+            onChange={e => setLoginContrasena(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && iniciarSesion()}
+          />
+          <button
+            type="button"
+            className="toggle-password"
+            onClick={() => setMostrarContrasena(!mostrarContrasena)}
+          >
+            {mostrarContrasena ? "🙈" : "👁️"}
+          </button>
+        </div>
         <button className="btn-primary" onClick={iniciarSesion}>
           Entrar
         </button>
