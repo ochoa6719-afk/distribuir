@@ -7,6 +7,13 @@ const supabase = window.supabase.createClient(
 );
 
 function App() {
+  // SESIÓN / LOGIN
+  const [session, setSession] = useState(null);
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [loginUsuario, setLoginUsuario] = useState("");
+  const [loginContrasena, setLoginContrasena] = useState("");
+  const [loginError, setLoginError] = useState("");
+
   const [inputValue, setInputValue] = useState(0);
   const [inputName, setInputName] = useState("");
   const [inputDate, setInputDate] = useState("");
@@ -29,25 +36,76 @@ function App() {
   //MODO OSCURO
   const [isDark, setIsDark] = useState(false);
 
-const cargarPerfiles = async () => {
-  const { data, error } = await supabase
-    .from("perfiles_app")
-    .select("*")
-    .order("id", { ascending: true });
+  /* ======================= AUTH ======================= */
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setCheckingSession(false);
+    });
 
-  if (error) {
-    console.error("Error cargando perfiles:", error);
-    return;
-  }
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+    });
 
-  const lista = data || [];
-  setPerfiles(lista);
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
-  if (!perfilActivo && lista.length > 0) {
-    setPerfilActivo(lista[0].nombre);
-    localStorage.setItem("perfilActivo", lista[0].nombre);
-  }
-};
+  const iniciarSesion = async () => {
+    setLoginError("");
+    if (!loginUsuario || !loginContrasena) {
+      setLoginError("Completa usuario y contraseña");
+      return;
+    }
+
+    const email = `${loginUsuario.trim().toLowerCase()}@tuapp.local`;
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password: loginContrasena
+    });
+
+    if (error) {
+      setLoginError("Usuario o contraseña incorrectos");
+      return;
+    }
+    setLoginContrasena("");
+  };
+
+  const cerrarSesion = async () => {
+    await supabase.auth.signOut();
+  };
+
+  const verificarContrasena = async () => {
+    const clave = prompt("Confirma tu contraseña para continuar:");
+    if (!clave) return false;
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: session.user.email,
+      password: clave
+    });
+
+    if (error) {
+      alert("Contraseña incorrecta.");
+      return false;
+    }
+    return true;
+  };
+
+  const cargarPerfiles = async () => {
+    const { data, error } = await supabase
+      .from("perfiles_app")
+      .select("*")
+      .order("id", { ascending: true });
+
+    if (error) console.error("Error cargando perfiles:", error);
+
+    const lista = data || [];
+    setPerfiles(lista);
+
+    if (!perfilActivo && lista.length > 0) {
+      setPerfilActivo(lista[0].nombre);
+      localStorage.setItem("perfilActivo", lista[0].nombre);
+    }
+  };
 
   const cargarMovimientos = async (perfil) => {
     if (!perfil) { setRecords([]); return; }
@@ -78,8 +136,8 @@ const cargarPerfiles = async () => {
   };
 
   useEffect(() => {
-    cargarPerfiles();
-  }, []);
+    if (session) cargarPerfiles();
+  }, [session]);
 
   useEffect(() => {
     if (perfilActivo) {
@@ -105,35 +163,29 @@ const cargarPerfiles = async () => {
     setEditId(null);
   };
 
-const crearPerfil = async () => {
-  const nombre = nuevoPerfilNombre.trim();
+  const crearPerfil = async () => {
+    const nombre = nuevoPerfilNombre.trim();
+    if (!nombre) {
+      alert("Escribe un nombre para el nuevo perfil");
+      return;
+    }
+    if (perfiles.some(p => p.nombre.toLowerCase() === nombre.toLowerCase())) {
+      alert("Ya existe un perfil con ese nombre");
+      return;
+    }
 
-  if (!nombre) {
-    alert("Escribe un nombre para el nuevo perfil");
-    return;
-  }
+    const { error } = await supabase.from("perfiles_app").insert([{ nombre }]);
 
-  if (perfiles.some(p => p.nombre.toLowerCase() === nombre.toLowerCase())) {
-    alert("Ya existe un perfil con ese nombre");
-    return;
-  }
+    if (error) {
+      console.error("Error creando perfil:", error);
+      alert("No se pudo crear el perfil. Revisa la consola (F12).");
+      return;
+    }
 
-  const { error } = await supabase
-    .from("perfiles_app")
-    .insert([{ nombre }]);
-
-  if (error) {
-    console.error("Error creando perfil:", error);
-    alert(
-      "No se pudo crear el perfil. Revisa la consola (F12) para ver el error exacto."
-    );
-    return;
-  }
-
-  setNuevoPerfilNombre("");
-  await cargarPerfiles();
-  cambiarPerfil(nombre);
-};
+    setNuevoPerfilNombre("");
+    await cargarPerfiles();
+    cambiarPerfil(nombre);
+  };
 
   const eliminarPerfil = async (nombre) => {
     if (perfiles.length <= 1) {
@@ -263,12 +315,9 @@ const crearPerfil = async () => {
 
   const restaurarTodoVacio = async () => {
     const ok = confirm(
-      "⚠️ Esto va a BORRAR todos los movimientos y gastos de TODOS los perfiles. Esta acción no se puede deshacer.\n\n¿Estás seguro?"
+      "Esto borrará TODOS los movimientos y gastos de TODOS los perfiles. ¿Continuar?"
     );
     if (!ok) return;
-
-    const ok2 = confirm("Última confirmación: ¿de verdad quieres dejar todo sin información?");
-    if (!ok2) return;
 
     await supabase.from("movimientos").delete().neq("id", 0);
     await supabase.from("gastos").delete().neq("id", 0);
@@ -303,15 +352,9 @@ const crearPerfil = async () => {
         const movimientosLimpios = (contenido.movimientos || []).map(({ id, ...resto }) => resto);
         const gastosLimpios = (contenido.gastos || []).map(({ id, ...resto }) => resto);
 
-        if (perfilesLimpios.length > 0) {
-          await supabase.from("perfiles_app").insert(perfilesLimpios);
-        }
-        if (movimientosLimpios.length > 0) {
-          await supabase.from("movimientos").insert(movimientosLimpios);
-        }
-        if (gastosLimpios.length > 0) {
-          await supabase.from("gastos").insert(gastosLimpios);
-        }
+        if (perfilesLimpios.length > 0) await supabase.from("perfiles_app").insert(perfilesLimpios);
+        if (movimientosLimpios.length > 0) await supabase.from("movimientos").insert(movimientosLimpios);
+        if (gastosLimpios.length > 0) await supabase.from("gastos").insert(gastosLimpios);
 
         await cargarPerfiles();
         cargarMovimientos(perfilActivo);
@@ -325,9 +368,55 @@ const crearPerfil = async () => {
     reader.readAsText(file);
   };
 
+  // Versiones protegidas con contraseña
+  const descargarRespaldoConfirmado = async () => {
+    if (await verificarContrasena()) descargarRespaldo();
+  };
+
+  const subirRespaldoConfirmado = async () => {
+    if (await verificarContrasena()) fileInputRef.current.click();
+  };
+
+  const restaurarTodoConfirmado = async () => {
+    if (await verificarContrasena()) restaurarTodoVacio();
+  };
+
+  /* ======================= RENDER ======================= */
+  if (checkingSession) {
+    return <div className="container"><p>Cargando...</p></div>;
+  }
+
+  if (!session) {
+    return (
+      <div className="container login-container">
+        <h2>Iniciar sesión</h2>
+        {loginError && <p className="login-error">{loginError}</p>}
+        <input
+          placeholder="Usuario"
+          value={loginUsuario}
+          onChange={e => setLoginUsuario(e.target.value)}
+        />
+        <input
+          type="password"
+          placeholder="Contraseña"
+          value={loginContrasena}
+          onChange={e => setLoginContrasena(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && iniciarSesion()}
+        />
+        <button className="btn-primary" onClick={iniciarSesion}>
+          Entrar
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="container">
       <h2>Control de Ingresos y Gastos</h2>
+
+      <button onClick={cerrarSesion} className="logout-btn">
+        🔒 Cerrar sesión
+      </button>
 
       <button onClick={toggleDarkMode} className="dark-toggle">
         {isDark ? "☀️" : "🌙"}
@@ -374,11 +463,11 @@ const crearPerfil = async () => {
       <div className="card respaldo-card">
         <h3>Respaldo de información</h3>
         <div className="respaldo-botones">
-          <button className="btn-success" onClick={descargarRespaldo}>
+          <button className="btn-success" onClick={descargarRespaldoConfirmado}>
             ⬇️ Bajar respaldo
           </button>
 
-          <button className="btn-primary" onClick={() => fileInputRef.current.click()}>
+          <button className="btn-primary" onClick={subirRespaldoConfirmado}>
             ⬆️ Subir respaldo
           </button>
           <input
@@ -389,7 +478,7 @@ const crearPerfil = async () => {
             style={{ display: "none" }}
           />
 
-          <button className="btn-danger" onClick={restaurarTodoVacio}>
+          <button className="btn-danger" onClick={restaurarTodoConfirmado}>
             ♻️ Restaurar todo (dejar vacío)
           </button>
         </div>
