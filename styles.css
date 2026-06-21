@@ -395,3 +395,90 @@ body.dark .cuenta-info span {
 .btn-bajar { background: #2563eb; }
 .btn-subir { background: #40916c; }
 .btn-restaurar { background: #dc2626; }
+
+/* ======================= TARJETAS ======================= */
+.card {
+  background: #f8fafc;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid #e2e8f0;
+}
+
+body.dark .card {
+  background: #0f172a;
+  border-color: #1e293b;
+}
+
+/* ======================= BARRA SUPERIOR (sesión) ======================= */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e5f5ec;
+}
+
+.top-bar span {
+  color: #475569;
+  font-size: 14px;
+}
+
+body.dark .top-bar {
+  border-bottom-color: #1e293b;
+}
+
+body.dark .top-bar span {
+  color: #cbd5e1;
+}
+
+/* ======================= DOS COLUMNAS ======================= */
+.dos-columnas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.dos-columnas .card {
+  margin-bottom: 0;
+}
+
+@media (max-width: 700px) {
+  .dos-columnas {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ======================= NAVEGACIÓN DE MÓDULOS ======================= */
+.nav-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #e5f5ec;
+  padding-bottom: 10px;
+}
+
+.nav-tab {
+  background: transparent;
+  color: #1b4332;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 10px 10px 0 0;
+  font-weight: 600;
+}
+
+.nav-tab.activo {
+  background: #40916c;
+  color: white;
+}
+
+body.dark .nav-tab {
+  color: #d1fae5;
+}
+
+body.dark .nav-tabs {
+  border-bottom-color: #1e293b;
+}

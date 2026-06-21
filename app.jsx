@@ -22,6 +22,7 @@ function App() {
   const [editId, setEditId] = useState(null);
   const formRef = useRef(null);
   const fileInputRef = useRef(null);
+  const tablaScrollRef = useRef(null);
 
   const [gastos, setGastos] = useState([]);
   const [newGastoName, setNewGastoName] = useState("");
@@ -36,8 +37,9 @@ function App() {
 
   //MODO OSCURO
   const [isDark, setIsDark] = useState(false);
+  const [vista, setVista] = useState("inicio");
 
-  /* ======================= AUTH ======================= */
+/* ======================= AUTH ======================= */
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
@@ -50,6 +52,12 @@ function App() {
 
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (tablaScrollRef.current) {
+      tablaScrollRef.current.scrollTop = tablaScrollRef.current.scrollHeight;
+    }
+  }, [records]);
 
   const iniciarSesion = async () => {
     setLoginError("");
@@ -424,210 +432,236 @@ function App() {
 
 return (
     <div className="container">
+      <div className="top-bar">
+        <span>Sesión iniciada como <strong>{session.user.email}</strong></span>
+        <button className="btn-danger" onClick={cerrarSesion}>
+          🔒 Cerrar sesión
+        </button>
+      </div>
+
       <h2>Control de Ingresos y Gastos</h2>
 
       <button onClick={toggleDarkMode} className="dark-toggle">
         {isDark ? "☀️" : "🌙"}
       </button>
 
-      <div className="card cuenta-card">
-        <h3>Cuenta</h3>
-        <div className="cuenta-info">
-          <span>Sesión iniciada como <strong>{session.user.email}</strong></span>
-          <button className="btn-danger" onClick={cerrarSesion}>
-            🔒 Cerrar sesión
-          </button>
-        </div>
+      <div className="nav-tabs">
+        <button
+          className={`nav-tab ${vista === "inicio" ? "activo" : ""}`}
+          onClick={() => setVista("inicio")}
+        >
+          🏠 Inicio
+        </button>
+        <button
+          className={`nav-tab ${vista === "perfiles" ? "activo" : ""}`}
+          onClick={() => setVista("perfiles")}
+        >
+          👤 Perfiles
+        </button>
+        <button
+          className={`nav-tab ${vista === "respaldos" ? "activo" : ""}`}
+          onClick={() => setVista("respaldos")}
+        >
+          💾 Respaldos
+        </button>
       </div>
 
-      <div className="card perfiles-card">
-        <h3>Perfil</h3>
+      {vista === "inicio" && (
+        <>
+          <div className="card" ref={formRef}>
+            <h3>{editId ? "Editar movimiento" : "Nuevo movimiento"}</h3>
 
-        {perfiles.length === 0 && <p className="hint-text">Crea tu primer perfil para empezar 👆</p>}
-
-        <div className="perfiles-tabs">
-          {perfiles.map(p => (
-            <div key={p.id} className="perfil-tab-wrapper">
-              <button
-                className={`perfil-tab ${p.nombre === perfilActivo ? "activo" : ""}`}
-                onClick={() => cambiarPerfil(p.nombre)}
-              >
-                {p.nombre}
-              </button>
-              {p.nombre === perfilActivo && perfiles.length > 1 && (
-                <button
-                  className="perfil-tab-delete"
-                  title={`Eliminar perfil ${p.nombre}`}
-                  onClick={() => eliminarPerfil(p.nombre)}
-                >
-                  ✕
-                </button>
-              )}
+            <div className="row">
+              <input
+                placeholder="Descripción"
+                value={inputName}
+                onChange={e => setInputName(e.target.value)}
+              />
             </div>
-          ))}
-        </div>
 
-        <div className="perfil-nuevo-row">
-          <input
-            placeholder="Nombre del nuevo perfil (ej. Persona 2)"
-            value={nuevoPerfilNombre}
-            onChange={e => setNuevoPerfilNombre(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && crearPerfil()}
-          />
-          <button className="btn-primary" onClick={crearPerfil}>
-            + Crear
-          </button>
-        </div>
-      </div>
+            <div className="row">
+              <input
+                type="number"
+                placeholder="Valor (+ ingreso / - gasto)"
+                value={inputValue}
+                onChange={e => setInputValue(e.target.value)}
+              />
 
-      <div className="card respaldo-card">
-        <h3>Respaldo de información</h3>
-        <p className="hint-text">Guarda una copia de tus datos o restáurala desde un archivo.</p>
+              <input
+                type="date"
+                value={inputDate}
+                onChange={e => setInputDate(e.target.value)}
+              />
+            </div>
 
-        <div className="respaldo-botones">
-          <button className="btn-respaldo btn-bajar" onClick={descargarRespaldoConfirmado}>
-            <span className="respaldo-icono">⬇️</span>
-            <span>Bajar respaldo</span>
-          </button>
+            <button className="btn-primary" onClick={handleSubmit}>
+              {editId ? "Actualizar" : "Guardar"}
+            </button>
+          </div>
 
-          <button className="btn-respaldo btn-subir" onClick={subirRespaldoConfirmado}>
-            <span className="respaldo-icono">⬆️</span>
-            <span>Subir respaldo</span>
-          </button>
+          <div className="ahorro">
+            <strong>Ahorro disponible {perfilActivo ? `(${perfilActivo})` : ""}</strong>
+            <span>${ahorroTotal.toFixed(2)}</span>
+          </div>
 
-          <button className="btn-respaldo btn-restaurar" onClick={restaurarTodoConfirmado}>
-            <span className="respaldo-icono">♻️</span>
-            <span>Restaurar todo</span>
-          </button>
-        </div>
-        <input
-          type="file"
-          accept=".json"
-          ref={fileInputRef}
-          onChange={subirRespaldo}
-          style={{ display: "none" }}
-        />
-      </div>
+          <div className="card">
+            <h3>Gastos / Deudas</h3>
 
-      <div className="card" ref={formRef}>
-        <h3>{editId ? "Editar movimiento" : "Nuevo movimiento"}</h3>
+            <div className="row">
+              <input
+                placeholder="Nombre del gasto"
+                value={newGastoName}
+                onChange={e => setNewGastoName(e.target.value)}
+              />
 
-        <div className="row">
-          <input
-            placeholder="Descripción"
-            value={inputName}
-            onChange={e => setInputName(e.target.value)}
-          />
-        </div>
+              <input
+                type="number"
+                placeholder="Monto"
+                value={newGastoMonto}
+                onChange={e => setNewGastoMonto(e.target.value)}
+              />
+            </div>
 
-        <div className="row">
-          <input
-            type="number"
-            placeholder="Valor (+ ingreso / - gasto)"
-            value={inputValue}
-            onChange={e => setInputValue(e.target.value)}
-          />
+            <button className="btn-success" onClick={addGasto}>
+              Agregar gasto
+            </button>
 
-          <input
-            type="date"
-            value={inputDate}
-            onChange={e => setInputDate(e.target.value)}
-          />
-        </div>
-
-        <button className="btn-primary" onClick={handleSubmit}>
-          {editId ? "Actualizar" : "Guardar"}
-        </button>
-      </div>
-
-      <div className="ahorro">
-        <strong>Ahorro disponible {perfilActivo ? `(${perfilActivo})` : ""}</strong>
-        <span>${ahorroTotal.toFixed(2)}</span>
-      </div>
-
-      <div className="card">
-        <h3>Gastos / Deudas</h3>
-
-        <div className="row">
-          <input
-            placeholder="Nombre del gasto"
-            value={newGastoName}
-            onChange={e => setNewGastoName(e.target.value)}
-          />
-
-          <input
-            type="number"
-            placeholder="Monto"
-            value={newGastoMonto}
-            onChange={e => setNewGastoMonto(e.target.value)}
-          />
-        </div>
-
-        <button className="btn-success" onClick={addGasto}>
-          Agregar gasto
-        </button>
-
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Gasto</th>
-              <th>Monto</th>
-              <th>Acción</th>
-            </tr>
-          </thead>
-          <tbody>
-            {gastos.map(g => (
-              <tr key={g.id}>
-                <td>{g.fecha?.slice(0,10)}</td>
-                <td>{g.nombre}</td>
-                <td>${g.monto}</td>
-                <td>
-                  <button className="btn-danger" onClick={() => removeGasto(g.id)}>
-                    🗑️
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="card">
-        <h3>Registros</h3>
-
-        <div className="tabla-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Detalle</th>
-                <th>Valor</th>
-                <th>Saldo</th>
-                <th>Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {records.map(r => (
-                <tr key={r.id}>
-                  <td>{r.fecha}</td>
-                  <td>{r.nombre}</td>
-                  <td>${r.valor}</td>
-                  <td>${r.saldo}</td>
-                  <td>
-                    <button className="btn-warning" onClick={() => editarMovimiento(r)}>
-                      ✏️
-                    </button>
-                    <button className="btn-danger" onClick={() => eliminarMovimiento(r.id)}>
-                      🗑️
-                    </button>
-                  </td>
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Gasto</th>
+                  <th>Monto</th>
+                  <th>Acción</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {gastos.map(g => (
+                  <tr key={g.id}>
+                    <td>{g.fecha?.slice(0,10)}</td>
+                    <td>{g.nombre}</td>
+                    <td>${g.monto}</td>
+                    <td>
+                      <button className="btn-danger" onClick={() => removeGasto(g.id)}>
+                        🗑️
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="card">
+            <h3>Registros</h3>
+
+            <div className="tabla-scroll" ref={tablaScrollRef}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Detalle</th>
+                    <th>Valor</th>
+                    <th>Saldo</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {records.map(r => (
+                    <tr key={r.id}>
+                      <td>{r.fecha}</td>
+                      <td>{r.nombre}</td>
+                      <td>${r.valor}</td>
+                      <td>${r.saldo}</td>
+                      <td>
+                        <button className="btn-warning" onClick={() => editarMovimiento(r)}>
+                          ✏️
+                        </button>
+                        <button className="btn-danger" onClick={() => eliminarMovimiento(r.id)}>
+                          🗑️
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+
+      {vista === "perfiles" && (
+        <div className="card perfiles-card">
+          <h3>Perfil</h3>
+
+          {perfiles.length === 0 && <p className="hint-text">Crea tu primer perfil para empezar 👆</p>}
+
+          <div className="perfiles-tabs">
+            {perfiles.map(p => (
+              <div key={p.id} className="perfil-tab-wrapper">
+                <button
+                  className={`perfil-tab ${p.nombre === perfilActivo ? "activo" : ""}`}
+                  onClick={() => cambiarPerfil(p.nombre)}
+                >
+                  {p.nombre}
+                </button>
+                {p.nombre === perfilActivo && perfiles.length > 1 && (
+                  <button
+                    className="perfil-tab-delete"
+                    title={`Eliminar perfil ${p.nombre}`}
+                    onClick={() => eliminarPerfil(p.nombre)}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="perfil-nuevo-row">
+            <input
+              placeholder="Nombre del nuevo perfil (ej. Persona 2)"
+              value={nuevoPerfilNombre}
+              onChange={e => setNuevoPerfilNombre(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && crearPerfil()}
+            />
+            <button className="btn-primary" onClick={crearPerfil}>
+              + Crear
+            </button>
+          </div>
         </div>
-      </div>
+      )}
+
+      {vista === "respaldos" && (
+        <div className="card respaldo-card">
+          <h3>Respaldo de información</h3>
+          <p className="hint-text">Guarda una copia de tus datos o restáurala desde un archivo.</p>
+
+          <div className="respaldo-botones">
+            <button className="btn-respaldo btn-bajar" onClick={descargarRespaldoConfirmado}>
+              <span className="respaldo-icono">⬇️</span>
+              <span>Bajar respaldo</span>
+            </button>
+
+            <button className="btn-respaldo btn-subir" onClick={subirRespaldoConfirmado}>
+              <span className="respaldo-icono">⬆️</span>
+              <span>Subir respaldo</span>
+            </button>
+
+            <button className="btn-respaldo btn-restaurar" onClick={restaurarTodoConfirmado}>
+              <span className="respaldo-icono">♻️</span>
+              <span>Restaurar todo</span>
+            </button>
+          </div>
+          <input
+            type="file"
+            accept=".json"
+            ref={fileInputRef}
+            onChange={subirRespaldo}
+            style={{ display: "none" }}
+          />
+        </div>
+      )}
     </div>
   );
 }
