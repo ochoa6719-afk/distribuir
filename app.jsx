@@ -39,7 +39,22 @@ function App() {
   const [isDark, setIsDark] = useState(false);
   const [vista, setVista] = useState("inicio");
 
-/* ======================= AUTH ======================= */
+  // BUSCADOR Y RESUMEN
+  const [busqueda, setBusqueda] = useState("");
+  const [mesSeleccionado, setMesSeleccionado] = useState(() => {
+    const hoy = new Date();
+    return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`;
+  });
+
+  // NOTIFICACIONES
+  const [toast, setToast] = useState(null);
+
+  const mostrarToast = (mensaje, tipo = "info") => {
+    setToast({ mensaje, tipo });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  /* ======================= AUTH ======================= */
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
@@ -96,7 +111,7 @@ function App() {
     });
 
     if (error) {
-      alert("Contraseña incorrecta.");
+      mostrarToast("Contraseña incorrecta.", "error");
       return false;
     }
     return true;
@@ -169,6 +184,17 @@ function App() {
 
   const ahorroTotal = records.reduce((s, r) => s + Number(r.valor), 0);
 
+  // RESUMEN MENSUAL
+  const registrosDelMes = records.filter(r => r.fecha && r.fecha.startsWith(mesSeleccionado));
+  const ingresosMes = registrosDelMes.filter(r => Number(r.valor) > 0).reduce((s, r) => s + Number(r.valor), 0);
+  const gastosMes = registrosDelMes.filter(r => Number(r.valor) < 0).reduce((s, r) => s + Math.abs(Number(r.valor)), 0);
+  const balanceMes = ingresosMes - gastosMes;
+
+  // BUSCADOR
+  const registrosFiltrados = records.filter(r =>
+    r.nombre.toLowerCase().includes(busqueda.toLowerCase())
+  );
+
   const cambiarPerfil = (nombre) => {
     setPerfilActivo(nombre);
     localStorage.setItem("perfilActivo", nombre);
@@ -178,11 +204,11 @@ function App() {
   const crearPerfil = async () => {
     const nombre = nuevoPerfilNombre.trim();
     if (!nombre) {
-      alert("Escribe un nombre para el nuevo perfil");
+      mostrarToast("Escribe un nombre para el nuevo perfil", "error");
       return;
     }
     if (perfiles.some(p => p.nombre.toLowerCase() === nombre.toLowerCase())) {
-      alert("Ya existe un perfil con ese nombre");
+      mostrarToast("Ya existe un perfil con ese nombre", "error");
       return;
     }
 
@@ -190,18 +216,19 @@ function App() {
 
     if (error) {
       console.error("Error creando perfil:", error);
-      alert("No se pudo crear el perfil. Revisa la consola (F12).");
+      mostrarToast("No se pudo crear el perfil. Revisa la consola (F12).", "error");
       return;
     }
 
     setNuevoPerfilNombre("");
     await cargarPerfiles();
     cambiarPerfil(nombre);
+    mostrarToast(`Perfil "${nombre}" creado`, "success");
   };
 
   const eliminarPerfil = async (nombre) => {
     if (perfiles.length <= 1) {
-      alert("Debe quedar al menos un perfil");
+      mostrarToast("Debe quedar al menos un perfil", "error");
       return;
     }
     const ok = confirm(
@@ -216,11 +243,12 @@ function App() {
     const restantes = perfiles.filter(p => p.nombre !== nombre);
     await cargarPerfiles();
     if (restantes.length > 0) cambiarPerfil(restantes[0].nombre);
+    mostrarToast(`Perfil "${nombre}" eliminado`, "success");
   };
 
   const handleSubmit = async () => {
     if (!inputName || !inputDate) {
-      alert("Completa todos los campos");
+      mostrarToast("Completa todos los campos", "error");
       return;
     }
 
@@ -235,6 +263,7 @@ function App() {
         .eq("id", editId);
 
       setEditId(null);
+      mostrarToast("Movimiento actualizado", "success");
     } else {
       await supabase.from("movimientos").insert([{
         nombre: inputName,
@@ -242,6 +271,7 @@ function App() {
         fecha: inputDate,
         perfil: perfilActivo
       }]);
+      mostrarToast("Movimiento guardado", "success");
     }
 
     setInputName("");
@@ -269,7 +299,7 @@ function App() {
 
   const addGasto = async () => {
     if (!newGastoName || !newGastoMonto) {
-      alert("Completa nombre y monto del gasto");
+      mostrarToast("Completa nombre y monto del gasto", "error");
       return;
     }
 
@@ -283,6 +313,7 @@ function App() {
     setNewGastoName("");
     setNewGastoMonto(0);
     cargarGastos(perfilActivo);
+    mostrarToast("Gasto agregado", "success");
   };
 
   const removeGasto = async (id) => {
@@ -296,6 +327,23 @@ function App() {
     setIsDark(newMode);
     document.body.classList.toggle("dark", newMode);
     localStorage.setItem("darkMode", newMode);
+  };
+
+  /* ======================= EXCEL ======================= */
+  const exportarExcel = () => {
+    const datos = registrosFiltrados.map(r => ({
+      Fecha: r.fecha,
+      Detalle: r.nombre,
+      Valor: r.valor,
+      Saldo: r.saldo
+    }));
+
+    const hoja = XLSX.utils.json_to_sheet(datos);
+    const libro = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(libro, hoja, "Registros");
+
+    const fechaArchivo = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(libro, `registros-${perfilActivo}-${fechaArchivo}.xlsx`);
   };
 
   /* ======================= RESPALDOS ======================= */
@@ -336,7 +384,7 @@ function App() {
 
     cargarMovimientos(perfilActivo);
     cargarGastos(perfilActivo);
-    alert("Listo, toda la información fue borrada.");
+    mostrarToast("Toda la información fue borrada", "success");
   };
 
   const subirRespaldo = (e) => {
@@ -371,9 +419,9 @@ function App() {
         await cargarPerfiles();
         cargarMovimientos(perfilActivo);
         cargarGastos(perfilActivo);
-        alert("Respaldo restaurado correctamente.");
+        mostrarToast("Respaldo restaurado correctamente", "success");
       } catch (err) {
-        alert("El archivo no es un respaldo válido.");
+        mostrarToast("El archivo no es un respaldo válido", "error");
       }
       e.target.value = "";
     };
@@ -430,8 +478,14 @@ function App() {
     );
   }
 
-return (
+  return (
     <div className="container">
+      {toast && (
+        <div className={`toast toast-${toast.tipo}`}>
+          {toast.mensaje}
+        </div>
+      )}
+
       <div className="top-bar">
         <span>Sesión iniciada como <strong>{session.user.email}</strong></span>
         <button className="btn-danger" onClick={cerrarSesion}>
@@ -504,6 +558,30 @@ return (
             <span>${ahorroTotal.toFixed(2)}</span>
           </div>
 
+          <div className="card resumen-card">
+            <h3>Resumen mensual</h3>
+            <input
+              type="month"
+              value={mesSeleccionado}
+              onChange={e => setMesSeleccionado(e.target.value)}
+            />
+
+            <div className="resumen-stats">
+              <div className="resumen-stat ingreso">
+                <span className="resumen-label">Ingresos</span>
+                <span className="resumen-valor">${ingresosMes.toFixed(2)}</span>
+              </div>
+              <div className="resumen-stat gasto">
+                <span className="resumen-label">Gastos</span>
+                <span className="resumen-valor">${gastosMes.toFixed(2)}</span>
+              </div>
+              <div className="resumen-stat balance">
+                <span className="resumen-label">Balance del mes</span>
+                <span className="resumen-valor">${balanceMes.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
           <div className="card">
             <h3>Gastos / Deudas</h3>
 
@@ -555,6 +633,18 @@ return (
           <div className="card">
             <h3>Registros</h3>
 
+            <div className="registros-herramientas">
+              <input
+                className="buscador-input"
+                placeholder="🔍 Buscar en registros..."
+                value={busqueda}
+                onChange={e => setBusqueda(e.target.value)}
+              />
+              <button className="btn-primary" onClick={exportarExcel}>
+                📊 Exportar a Excel
+              </button>
+            </div>
+
             <div className="tabla-scroll" ref={tablaScrollRef}>
               <table>
                 <thead>
@@ -567,7 +657,7 @@ return (
                   </tr>
                 </thead>
                 <tbody>
-                  {records.map(r => (
+                  {registrosFiltrados.map(r => (
                     <tr key={r.id}>
                       <td>{r.fecha}</td>
                       <td>{r.nombre}</td>

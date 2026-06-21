@@ -482,3 +482,92 @@ body.dark .nav-tab {
 body.dark .nav-tabs {
   border-bottom-color: #1e293b;
 }
+
+/* ======================= NOTIFICACIONES (TOAST) ======================= */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 14px 24px;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+  z-index: 1000;
+  animation: toast-in 0.3s ease;
+}
+
+.toast-success { background: #16a34a; }
+.toast-error { background: #dc2626; }
+.toast-info { background: #2563eb; }
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translate(-50%, 20px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ======================= RESUMEN MENSUAL ======================= */
+.resumen-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 15px;
+}
+
+.resumen-stat {
+  text-align: center;
+  padding: 14px;
+  border-radius: 12px;
+  background: #f1f5f9;
+}
+
+.resumen-label {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.resumen-valor {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.resumen-stat.ingreso .resumen-valor { color: #16a34a; }
+.resumen-stat.gasto .resumen-valor { color: #dc2626; }
+.resumen-stat.balance .resumen-valor { color: #1b4332; }
+
+body.dark .resumen-stat {
+  background: #1e293b;
+}
+
+body.dark .resumen-label {
+  color: #94a3b8;
+}
+
+body.dark .resumen-stat.balance .resumen-valor {
+  color: #d1fae5;
+}
+
+/* ======================= BUSCADOR Y EXPORTAR ======================= */
+.registros-herramientas {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.buscador-input {
+  flex: 1;
+  margin-bottom: 0;
+  min-width: 150px;
+}
+
+.registros-herramientas button {
+  margin-bottom: 0;
+  white-space: nowrap;
+}
