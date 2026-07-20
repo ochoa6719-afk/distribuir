@@ -2,8 +2,32 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
-<title>Distribuidor de Valores</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M&amp;A Finanzas</title>
+<meta name="description" content="M&amp;A Finanzas — Control de ingresos, gastos, ahorros y deudas" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#7c3fd4" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="M&amp;A Finanzas" />
+<meta name="application-name" content="M&amp;A Finanzas" />
+<meta name="msapplication-TileColor" content="#7c3fd4" />
+<meta name="msapplication-TileImage" content="./assets/icon-192.png" />
+
+<!-- ======================= ICONO OFICIAL M&amp;A FINANZAS ======================= -->
+<link rel="manifest" href="./manifest.webmanifest" />
+<link rel="icon" type="image/x-icon" href="./assets/favicon.ico" />
+<link rel="icon" type="image/png" sizes="16x16" href="./assets/favicon-16x16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32x32.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="./assets/icon-192.png" />
+<link rel="icon" type="image/png" sizes="512x512" href="./assets/icon-512.png" />
+<link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon.png" />
+<link rel="shortcut icon" href="./assets/favicon.ico" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
 <link rel="stylesheet" href="styles.css" />
 
@@ -17,6 +41,17 @@
 
 <body>
 <div id="root"></div>
+
+<!-- ======================= CAPA DE SERVICIOS =======================
+     Se cargan ANTES de app.jsx porque la UI los consume como globales
+     (mismo patrón sin bundler que el resto del proyecto). El orden
+     importa: recordatorios.service primero, luego las implementaciones
+     de notificaciones, y al final el selector de plataforma. -->
+<script src="./services/recordatorios.service.js"></script>
+<script src="./services/notificaciones.web.js"></script>
+<script src="./services/notificaciones.capacitor.js"></script>
+<script src="./services/notificaciones.index.js"></script>
+
 <script type="text/babel" src="./app.jsx"></script>
 </body>
 </html>
