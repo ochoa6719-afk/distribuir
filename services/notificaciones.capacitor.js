@@ -85,21 +85,63 @@ window.NotificacionesCapacitor = (function () {
     }
   }
 
+  function diasDelMes(anio, mes) {
+    return new Date(anio, mes + 1, 0).getDate();
+  }
+
+  // Suma n unidades a una fecha sin desbordar meses (31 ene + 1 mes = 28/29 feb)
+  function avanzar(fecha, unidad, n) {
+    const d = new Date(fecha.getTime());
+    if (unidad === "day") {
+      d.setDate(d.getDate() + n);
+    } else if (unidad === "week") {
+      d.setDate(d.getDate() + 7 * n);
+    } else {
+      const dia = d.getDate();
+      d.setDate(1);
+      if (unidad === "month") d.setMonth(d.getMonth() + n);
+      else d.setFullYear(d.getFullYear() + n);
+      d.setDate(Math.min(dia, diasDelMes(d.getFullYear(), d.getMonth())));
+    }
+    return d;
+  }
+
+  /**
+   * Devuelve la próxima ocasión FUTURA en que debe sonar, o null si ya no
+   * queda ninguna. IMPORTANTE: Android dispara de inmediato cualquier
+   * notificación programada con una fecha pasada, así que nunca se debe
+   * enviar al plugin una fecha que ya venció.
+   */
+  function proximaOcurrencia(inicio, unidad, total, ahora) {
+    const margen = ahora.getTime() + 1000;
+    if (inicio.getTime() > margen) return { at: inicio, restantes: total };
+    if (!unidad) return null;
+
+    let n = 0;
+    let fecha = inicio;
+    while (fecha.getTime() <= margen) {
+      n++;
+      if (total && n >= total) return null;   // ya se cumplieron todas
+      if (n > 5000) return null;              // salvaguarda
+      fecha = avanzar(inicio, unidad, n);
+    }
+    return { at: fecha, restantes: total ? total - n : undefined };
+  }
+
   function construirNotificacion(recordatorio) {
     const fechaHora = window.RecordatoriosService.obtenerFechaHora(recordatorio);
+    if (isNaN(fechaHora.getTime())) return null;
     const anticipacion = Number(recordatorio._anticipacionMin || 0);
     fechaHora.setMinutes(fechaHora.getMinutes() - anticipacion);
 
     const repiteCada = mapearRepeticion(recordatorio.repeticion);
+    const total = recordatorio.cantidad_repeticiones ? Number(recordatorio.cantidad_repeticiones) : undefined;
+    const proxima = proximaOcurrencia(fechaHora, repiteCada, total, new Date());
+    if (!proxima) return null;   // ya venció: no se programa (evita disparos inmediatos)
 
     const schedule = repiteCada
-      ? {
-          at: fechaHora,
-          every: repiteCada,
-          count: recordatorio.cantidad_repeticiones ? Number(recordatorio.cantidad_repeticiones) : undefined,
-          allowWhileIdle: true
-        }
-      : { at: fechaHora, allowWhileIdle: true };
+      ? { at: proxima.at, every: repiteCada, count: proxima.restantes, allowWhileIdle: true }
+      : { at: proxima.at, allowWhileIdle: true };
 
     return {
       // Capacitor requiere id numérico entero (32 bits) por notificación
@@ -114,8 +156,14 @@ window.NotificacionesCapacitor = (function () {
 
   async function programar(recordatorio) {
     const LocalNotifications = plugin();
-    if (!LocalNotifications || recordatorio.completado) return;
-    await LocalNotifications.schedule({ notifications: [construirNotificacion(recordatorio)] });
+    if (!LocalNotifications) return;
+    // Siempre se limpia primero: así, reprogramar nunca duplica ni deja
+    // restos de una programación anterior.
+    await cancelar(recordatorio.id);
+    if (recordatorio.completado) return;
+    const notificacion = construirNotificacion(recordatorio);
+    if (!notificacion) return;
+    await LocalNotifications.schedule({ notifications: [notificacion] });
   }
 
   async function actualizar(recordatorio) {
@@ -129,5 +177,5 @@ window.NotificacionesCapacitor = (function () {
     await LocalNotifications.cancel({ notifications: [{ id: Number(id) }] });
   }
 
-  return { estaDisponible, inicializar, solicitarPermisos, programar, actualizar, cancelar };
+  return { estaDisponible, inicializar, solicitarPermisos, programar, actualizar, cancelar, _proximaOcurrencia: proximaOcurrencia };
 })();
