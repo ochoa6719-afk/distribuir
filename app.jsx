@@ -472,6 +472,206 @@ const TITULOS_VISTA = {
   configuracion: "Configuración"
 };
 
+/* ======================= TECLADO NUMÉRICO PROPIO =======================
+   Reemplaza el teclado del teléfono en los campos de monto: el sistema no
+   ofrece el signo "-" en teclados numéricos, así que la app trae el suyo
+   con +, −, punto decimal, borrar (mantener pulsado = limpiar todo) y Listo.
+   También responde al teclado físico (0-9, . , + - Retroceso Enter Esc). */
+function TecladoNumerico({ valorInicial, permitirSigno, titulo, onConfirmar, onCancelar }) {
+  const inicial = Number(valorInicial) || 0;
+  const [negativo, setNegativo] = useState(permitirSigno && inicial < 0);
+  const [cuerpo, setCuerpo] = useState(inicial !== 0 ? String(Math.abs(inicial)) : "");
+  const temporizadorBorrar = useRef(null);
+  const limpioConPulsacionLarga = useRef(false);
+
+  const vibrar = () => { try { navigator.vibrate && navigator.vibrate(8); } catch (e) {} };
+
+  const agregarDigito = (d) => {
+    vibrar();
+    setCuerpo(actual => {
+      if (actual.length >= 11) return actual;
+      const partes = actual.split(".");
+      if (partes[1] !== undefined && partes[1].length >= 2) return actual;
+      if (actual === "0") return d === "0" ? actual : d;
+      return actual + d;
+    });
+  };
+  const agregarPunto = () => {
+    vibrar();
+    setCuerpo(actual => (actual.includes(".") ? actual : (actual || "0") + "."));
+  };
+  const borrarUno = () => { vibrar(); setCuerpo(actual => actual.slice(0, -1)); };
+  const limpiarTodo = () => { vibrar(); setCuerpo(""); };
+  const fijarSigno = (neg) => { if (!permitirSigno) return; vibrar(); setNegativo(neg); };
+
+  const confirmar = () => {
+    const limpio = cuerpo.endsWith(".") ? cuerpo.slice(0, -1) : cuerpo;
+    if (limpio === "" || Number(limpio) === 0) { onConfirmar(""); return; }
+    onConfirmar((negativo && permitirSigno ? "-" : "") + limpio);
+  };
+
+  // Teclado físico (útil en la versión web de escritorio)
+  const confirmarRef = useRef(confirmar);
+  confirmarRef.current = confirmar;
+  useEffect(() => {
+    const alPresionar = (e) => {
+      if (/^[0-9]$/.test(e.key)) { e.preventDefault(); agregarDigito(e.key); }
+      else if (e.key === "." || e.key === ",") { e.preventDefault(); agregarPunto(); }
+      else if (e.key === "-") { e.preventDefault(); fijarSigno(true); }
+      else if (e.key === "+") { e.preventDefault(); fijarSigno(false); }
+      else if (e.key === "Backspace") { e.preventDefault(); borrarUno(); }
+      else if (e.key === "Enter") { e.preventDefault(); confirmarRef.current(); }
+      else if (e.key === "Escape") { e.preventDefault(); onCancelar(); }
+    };
+    window.addEventListener("keydown", alPresionar);
+    return () => window.removeEventListener("keydown", alPresionar);
+  }, [permitirSigno]);
+
+  // Bloquea el scroll del fondo mientras el teclado está abierto
+  useEffect(() => {
+    const anterior = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    return () => { document.body.style.overflow = anterior; };
+  }, []);
+
+  const iniciarBorrado = () => {
+    limpioConPulsacionLarga.current = false;
+    temporizadorBorrar.current = setTimeout(() => {
+      limpioConPulsacionLarga.current = true;
+      limpiarTodo();
+    }, 450);
+  };
+  const terminarBorrado = () => { clearTimeout(temporizadorBorrar.current); };
+  const clickBorrar = () => {
+    if (limpioConPulsacionLarga.current) { limpioConPulsacionLarga.current = false; return; }
+    borrarUno();
+  };
+
+  const hayValor = cuerpo !== "" && Number(cuerpo) !== 0;
+  const claseSigno = !permitirSigno ? "" : negativo ? "negativo" : "positivo";
+  const etiquetaTipo = !permitirSigno ? "Monto" : negativo ? "Gasto" : "Ingreso";
+  const tecla = (texto, onClick, extra = "") => (
+    <button type="button" className={`tecla ${extra}`} onClick={onClick}>{texto}</button>
+  );
+
+  return ReactDOM.createPortal(
+    <div className="teclado-overlay" onClick={onCancelar}>
+      <div
+        className="teclado-hoja"
+        role="dialog"
+        aria-modal="true"
+        aria-label={titulo || "Ingresar monto"}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="teclado-agarre" />
+        <div className="teclado-cabecera">
+          <span className="teclado-titulo">{titulo || "Ingresar monto"}</span>
+          <button type="button" className="teclado-cerrar" onClick={onCancelar} aria-label="Cerrar">
+            <Icon name="close" size={16} />
+          </button>
+        </div>
+
+        <div className={`teclado-pantalla ${claseSigno}`}>
+          <span className="teclado-tipo">{etiquetaTipo}</span>
+          <div className="teclado-monto">
+            {permitirSigno && <span className="teclado-signo">{negativo ? "−" : "+"}</span>}
+            <span className="teclado-moneda">$</span>
+            <span className={hayValor || cuerpo ? "teclado-numero" : "teclado-numero vacio"}>
+              {cuerpo || "0"}
+            </span>
+          </div>
+        </div>
+
+        <div className="teclado-grid">
+          {tecla("7", () => agregarDigito("7"))}
+          {tecla("8", () => agregarDigito("8"))}
+          {tecla("9", () => agregarDigito("9"))}
+          <button
+            type="button"
+            className="tecla tecla-borrar"
+            aria-label="Borrar (mantén pulsado para limpiar todo)"
+            onPointerDown={iniciarBorrado}
+            onPointerUp={terminarBorrado}
+            onPointerLeave={terminarBorrado}
+            onPointerCancel={terminarBorrado}
+            onClick={clickBorrar}
+            onContextMenu={e => e.preventDefault()}
+          >
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z" />
+              <path d="m17 9-5 6M12 9l5 6" />
+            </svg>
+          </button>
+
+          {tecla("4", () => agregarDigito("4"))}
+          {tecla("5", () => agregarDigito("5"))}
+          {tecla("6", () => agregarDigito("6"))}
+          <button
+            type="button"
+            className={`tecla tecla-signo tecla-menos ${negativo && permitirSigno ? "activa" : ""}`}
+            disabled={!permitirSigno}
+            onClick={() => fijarSigno(true)}
+            aria-label="Gasto (negativo)"
+          >−</button>
+
+          {tecla("1", () => agregarDigito("1"))}
+          {tecla("2", () => agregarDigito("2"))}
+          {tecla("3", () => agregarDigito("3"))}
+          <button
+            type="button"
+            className={`tecla tecla-signo tecla-mas ${!negativo && permitirSigno ? "activa" : ""}`}
+            disabled={!permitirSigno}
+            onClick={() => fijarSigno(false)}
+            aria-label="Ingreso (positivo)"
+          >+</button>
+
+          {tecla("0", () => agregarDigito("0"), "tecla-cero")}
+          {tecla(".", agregarPunto)}
+          <button type="button" className="tecla tecla-listo" onClick={confirmar} aria-label="Listo">
+            <Icon name="check" size={26} />
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+/* Campo de monto: parece un input, pero abre el teclado propio en lugar del del teléfono */
+function CampoMonto({ value, onChange, placeholder, permitirSigno = true, titulo }) {
+  const [abierto, setAbierto] = useState(false);
+  const n = Number(value) || 0;
+  const clase = n === 0 ? "" : !permitirSigno ? "con-valor" : n < 0 ? "con-valor negativo" : "con-valor positivo";
+
+  return (
+    <React.Fragment>
+      <button type="button" className={`monto-campo ${clase}`} onClick={() => setAbierto(true)}>
+        {n !== 0 ? (
+          <span className="monto-campo-valor">
+            {permitirSigno ? (n < 0 ? "− " : "+ ") : ""}${Math.abs(n).toFixed(2)}
+          </span>
+        ) : (
+          <span className="monto-campo-placeholder">{placeholder}</span>
+        )}
+        <svg className="monto-campo-icono" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="4" y="2" width="16" height="20" rx="3" />
+          <path d="M8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 18.5h.01M12 18.5h.01M16 18.5h.01" />
+        </svg>
+      </button>
+      {abierto && (
+        <TecladoNumerico
+          valorInicial={value}
+          permitirSigno={permitirSigno}
+          titulo={titulo}
+          onConfirmar={(v) => { onChange(v); setAbierto(false); }}
+          onCancelar={() => setAbierto(false)}
+        />
+      )}
+    </React.Fragment>
+  );
+}
+
 function App() {
   // SESIÓN / LOGIN
   const [session, setSession] = useState(null);
@@ -1851,11 +2051,11 @@ function App() {
                 <div className="form-row two-col">
                   <div className="field">
                     <label>Valor</label>
-                    <input
-                      type="number"
+                    <CampoMonto
+                      titulo="Valor del movimiento"
                       placeholder="+ ingreso / - gasto"
                       value={inputValue}
-                      onChange={e => setInputValue(e.target.value)}
+                      onChange={setInputValue}
                     />
                   </div>
                   <div className="field">
@@ -1887,11 +2087,12 @@ function App() {
                   </div>
                   <div className="field">
                     <label>Monto</label>
-                    <input
-                      type="number"
+                    <CampoMonto
+                      titulo="Monto del gasto / deuda"
                       placeholder="Ej. 25.00"
+                      permitirSigno={false}
                       value={newGastoMonto}
-                      onChange={e => setNewGastoMonto(e.target.value)}
+                      onChange={setNewGastoMonto}
                     />
                   </div>
                 </div>
