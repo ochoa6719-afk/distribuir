@@ -1304,38 +1304,55 @@ function App() {
   };
 
   const handleSubmit = async () => {
-    if (!inputName || !inputDate) {
-      mostrarToast("Completa todos los campos", "error");
+    const nombreLimpio = String(inputName || "").trim();
+    const valorMovimiento = Number(inputValue);
+
+    if (!nombreLimpio || !inputDate) {
+      mostrarToast("Completa la descripción y la fecha", "error");
       return;
     }
 
-    if (editId) {
-      await supabase
-        .from("movimientos")
-        .update({
-          nombre: inputName,
-          valor: Number(inputValue),
-          fecha: inputDate
-        })
-        .eq("id", editId);
-
-      setEditId(null);
-      mostrarToast("Movimiento actualizado", "success");
-    } else {
-      await supabase.from("movimientos").insert([{
-        nombre: inputName,
-        valor: Number(inputValue),
-        fecha: inputDate,
-        perfil: perfilActivo,
-        user_id: session.user.id
-      }]);
-      mostrarToast("Movimiento guardado", "success");
+    // No permitir movimientos vacíos, inválidos o con valor cero.
+    if (inputValue === "" || !Number.isFinite(valorMovimiento) || valorMovimiento === 0) {
+      mostrarToast("El valor del movimiento debe ser diferente de 0", "error");
+      return;
     }
 
-    setInputName("");
-    setInputValue(0);
-    setInputDate("");
-    cargarMovimientos(perfilActivo);
+    try {
+      if (editId) {
+        const { error } = await supabase
+          .from("movimientos")
+          .update({
+            nombre: nombreLimpio,
+            valor: valorMovimiento,
+            fecha: inputDate
+          })
+          .eq("id", editId);
+
+        if (error) throw error;
+        setEditId(null);
+        mostrarToast("Movimiento actualizado", "success");
+      } else {
+        const { error } = await supabase.from("movimientos").insert([{
+          nombre: nombreLimpio,
+          valor: valorMovimiento,
+          fecha: inputDate,
+          perfil: perfilActivo,
+          user_id: session.user.id
+        }]);
+
+        if (error) throw error;
+        mostrarToast("Movimiento guardado", "success");
+      }
+
+      setInputName("");
+      setInputValue(0);
+      setInputDate("");
+      await cargarMovimientos(perfilActivo);
+    } catch (error) {
+      console.error("Error guardando movimiento:", error);
+      mostrarToast("No se pudo guardar el movimiento. Inténtalo nuevamente.", "error");
+    }
   };
 
   const eliminarMovimiento = async (id) => {

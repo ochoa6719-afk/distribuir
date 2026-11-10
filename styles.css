@@ -1567,3 +1567,65 @@ input[type="date"]::-webkit-date-and-time-value,
 input[type="month"]::-webkit-date-and-time-value,
 input[type="time"]::-webkit-date-and-time-value { text-align: left; min-height: 1.3em; }
 .card-header-row input[type="month"] { width: auto; }
+
+
+/* ======================= MEJORAS DE EXPERIENCIA Y MICROANIMACIONES ======================= */
+@keyframes contenido-entrada {
+  from { opacity: 0; transform: translateY(9px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes tarjeta-aparicion {
+  from { opacity: 0; transform: translateY(7px) scale(.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.main-area .content {
+  animation: contenido-entrada .28s ease both;
+}
+.content .card {
+  animation: tarjeta-aparicion .32s ease both;
+  transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+.content .card:hover {
+  border-color: var(--border-strong);
+}
+.btn, .icon-btn, .sidebar-link, .bottom-nav-item,
+.perfil-selector-tarjeta, .monto-campo {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .18s ease, background-color .18s ease,
+    color .18s ease, box-shadow .18s ease, border-color .18s ease, opacity .18s ease;
+}
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+.btn:active:not(:disabled), .icon-btn:active, .sidebar-link:active {
+  transform: scale(.975);
+}
+.btn:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+input, select, textarea {
+  transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+input:focus, select:focus, textarea:focus {
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+.table-wrapper tbody tr {
+  transition: background-color .16s ease;
+}
+.table-wrapper tbody tr:hover {
+  background: var(--bg-surface-hover);
+}
+.toast {
+  animation: contenido-entrada .22s ease both;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
